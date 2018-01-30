@@ -62,9 +62,6 @@ def convert_XMatch_to_catalogue(catalogue_from_Aladin_path):
         writer.writerow(convert_header.values())
         writer.writerows(stars_from_file)
 
-def calc_today_coordinates():
-    pass
-
 
 def main():
     save_dir_path = os.path.abspath(input('Enter the path where to save NomUs catalogue:\n'))
