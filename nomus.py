@@ -92,14 +92,16 @@ def open_XMatch(XMatch_NOMAD_USNO_path):
     :param XMatch_NOMAD_USNO_path: Path to XMatch NOMAD1 and USNO-B1 catalogues
     :return: data of stars in XMatch_NOMAD_USNO_path file
     '''
-    stars_from_file = []
-    with open(XMatch_NOMAD_USNO_path, 'r') as csv_file:
-        csv_file = csv.DictReader(csv_file, delimiter='\t')
-        next(csv_file)
-        for star in csv_file:
-            stars_from_file.append(star)
 
-    return stars_from_file
+    with open(XMatch_NOMAD_USNO_path, 'r') as f:
+        header = f.readline().strip().split('\t')
+
+    with open(XMatch_NOMAD_USNO_path, 'r') as csv_file:
+        csv_file = csv.DictReader(csv_file, delimiter=',')
+        next(csv_file)
+        stars_from_file = [row for row in csv_file]
+
+    return header, stars_from_file
 
 
 def main():
@@ -112,7 +114,7 @@ def main():
     try:
         XMatch_NOMAD_USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
         if XMatch_NOMAD_USNO_path:
-            stars_from_file = open_XMatch(XMatch_NOMAD_USNO_path)
+            header, stars_from_file = open_XMatch(XMatch_NOMAD_USNO_path)
             stars_with_epoph_coord = calc_today_coordinates(stars_from_file, epoch)
             convert_XMatch_to_catalogue(XMatch_NOMAD_USNO_path)
     except OSError as e:
