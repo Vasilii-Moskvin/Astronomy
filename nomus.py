@@ -1,6 +1,7 @@
 from collections import OrderedDict, namedtuple
 import csv
 import os.path
+import math
 
 
 def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
@@ -63,8 +64,42 @@ def convert_XMatch_to_catalogue(XMatch_NOMAD_USNO_path):
         writer.writerows(stars_from_file)
 
 
-def calc_today_coordinates(NOMAD_USNO_path, epoch):
-    pass
+def calc_today_coordinates(stars_from_file, epoch):
+    '''
+    Calculates the objects' coordinates, which are in the XMatch_NOMAD_USNO_path file for the epoch,
+    indicated in the variable epoch.
+    :param stars_from_file: XMatch NOMAD1 and USNO-B1 catalogues
+    :param epoch: epoch
+    :return: XMatch NOMAD1 and USNO-B1 catalogues with added colums of new coordinates
+    '''
+    ra = '_RAJ2000_tab1'
+    dec = '_DEJ2000_tab1'
+    pm_ra = 'pmRA_tab1'
+    pm_dec = 'pmDE_tab1'
+    ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
+    dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
+
+    for star in stars_from_file:
+        star[dec_by_epoch] = dec + 0.001 * star[pm_dec]
+        star[ra_by_epoch] = ra + 0.001 * star[pm_ra] * math.cos((math.pi / 180) * star[dec_by_epoch])
+
+    return stars_from_file
+
+
+def open_XMatch(XMatch_NOMAD_USNO_path):
+    '''
+    Open XMatch_NOMAD_USNO_path
+    :param XMatch_NOMAD_USNO_path: Path to XMatch NOMAD1 and USNO-B1 catalogues
+    :return: data of stars in XMatch_NOMAD_USNO_path file
+    '''
+    stars_from_file = []
+    with open(XMatch_NOMAD_USNO_path, 'r') as csv_file:
+        csv_file = csv.DictReader(csv_file, delimiter='\t')
+        next(csv_file)
+        for star in csv_file:
+            stars_from_file.append(star)
+
+    return stars_from_file
 
 
 def main():
@@ -77,6 +112,8 @@ def main():
     try:
         XMatch_NOMAD_USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
         if XMatch_NOMAD_USNO_path:
+            stars_from_file = open_XMatch(XMatch_NOMAD_USNO_path)
+            stars_with_epoph_coord = calc_today_coordinates(stars_from_file, epoch)
             convert_XMatch_to_catalogue(XMatch_NOMAD_USNO_path)
     except OSError as e:
         print(e)
