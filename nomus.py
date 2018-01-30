@@ -2,6 +2,7 @@ from collections import OrderedDict, namedtuple
 import csv
 import os.path
 import math
+import often_used as ou
 
 
 def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
@@ -36,32 +37,35 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
         return False
 
 
-def convert_XMatch_to_catalogue(XMatch_NOMAD_USNO_path):
+def convert_XMatch_to_catalogue( stars_inform, epoch=''):
     """
     Converts XMatch-file from Aladin to csv- catalogue.
     :param NOMAD_USNO_path: path to XMatch NOMAD1 and USNO-B1 catalogues
     :return: csv- catalogue
     """
-    convert_header = OrderedDict((('_RAJ2000_tab1', 'RAJ2000'),
-                                  ('_DEJ2000_tab1', 'DEJ2000'),
-                                  ('Bmag_tab1', 'B_mag'),
-                                  ('Vmag_tab1', 'V_mag'),
-                                  ('Rmag_tab1', 'R_mag'),
-                                  ('Imag_tab2', 'I_mag')))
-    Stars = namedtuple('Stars', convert_header.values())
+    if epoch:
+        convert_header = OrderedDict((('_RAJ{}_tab1'.format(epoch), 'RAJ{}'.format(epoch)),
+                                      ('_DEJ{}_tab1'.format(epoch), 'DEJ{}'.format(epoch)),
+                                      ('NOMAD1_tab1', 'NOMAD1_ID'),
+                                      ('Bmag_tab1', 'B_mag'),
+                                      ('Vmag_tab1', 'V_mag'),
+                                      ('Rmag_tab1', 'R_mag'),
+                                      ('Imag_tab2', 'I_mag')))
+    else:
+        convert_header = OrderedDict((('_RAJ2000_tab1', 'RAJ2000'),
+                                      ('_DEJ2000_tab1', 'DEJ2000'),
+                                      ('NOMAD1_tab1', 'NOMAD1_ID'),
+                                      ('Bmag_tab1', 'B_mag'),
+                                      ('Vmag_tab1', 'V_mag'),
+                                      ('Rmag_tab1', 'R_mag'),
+                                      ('Imag_tab2', 'I_mag')))
 
-    with open(XMatch_NOMAD_USNO_path, 'r') as csv_file:
-        csv_file = csv.DictReader(csv_file, delimiter='\t')
-        next(csv_file)
-        stars_from_file = [Stars(**dict(map(lambda key: (convert_header[key], star[key]) if star[key] != ' ' else
-                                                        (convert_header[key], '-'),
-                                            filter(lambda x: x in convert_header, star.keys()))))
-                           for star in csv_file]
+    save_header = list(convert_header.values())
 
-    with open(XMatch_NOMAD_USNO_path, 'w', newline='') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
-        writer.writerow(convert_header.values())
-        writer.writerows(stars_from_file)
+    data_to_csv = [dict(map(lambda key: (convert_header[key], star[key]),
+                            filter(lambda x: x in convert_header, star.keys()))) for star in stars_inform]
+
+    return data_to_csv, save_header
 
 
 def calc_today_coordinates(stars_from_file, epoch):
@@ -79,34 +83,21 @@ def calc_today_coordinates(stars_from_file, epoch):
     ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
     dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
 
+    float_epoch = float(epoch) - 2000
+
     for star in stars_from_file:
-        star[dec_by_epoch] = dec + 0.001 * star[pm_dec]
-        star[ra_by_epoch] = ra + 0.001 * star[pm_ra] * math.cos((math.pi / 180) * star[dec_by_epoch])
+        star[dec_by_epoch] = float(star[dec]) + (0.001 * float(star[pm_dec]) * float_epoch) / 3600
+        old_cos_dec = math.cos((math.pi / 180) * float(star[dec]))
+        new_cos_dec = math.cos((math.pi / 180) * float(star[dec_by_epoch]))
+        star[ra_by_epoch] = float(star[ra]) + \
+                            ((0.001 * float(star[pm_ra]) * float_epoch) / 3600) * (new_cos_dec / old_cos_dec)
 
     return stars_from_file
 
 
-def open_XMatch(XMatch_NOMAD_USNO_path):
-    '''
-    Open XMatch_NOMAD_USNO_path
-    :param XMatch_NOMAD_USNO_path: Path to XMatch NOMAD1 and USNO-B1 catalogues
-    :return: data of stars in XMatch_NOMAD_USNO_path file
-    '''
-
-    with open(XMatch_NOMAD_USNO_path, 'r') as f:
-        header = f.readline().strip().split('\t')
-
-    with open(XMatch_NOMAD_USNO_path, 'r') as csv_file:
-        csv_file = csv.DictReader(csv_file, delimiter=',')
-        next(csv_file)
-        stars_from_file = [row for row in csv_file]
-
-    return header, stars_from_file
-
-
 def main():
     save_dir_path = os.path.abspath(input('Enter the path where to save NomUs catalogue:\n'))
-    epoch = input('Enter Epoph:\n')
+    epoch = input('Enter Epoch:\n')
     ra = input('Enter RA:\n')
     de = input('Enter DE:\n')
     radius = input('Enter radius:\n')
@@ -114,9 +105,12 @@ def main():
     try:
         XMatch_NOMAD_USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
         if XMatch_NOMAD_USNO_path:
-            header, stars_from_file = open_XMatch(XMatch_NOMAD_USNO_path)
-            stars_with_epoph_coord = calc_today_coordinates(stars_from_file, epoch)
-            convert_XMatch_to_catalogue(XMatch_NOMAD_USNO_path)
+            header, stars_inform = ou.open_csv(XMatch_NOMAD_USNO_path, delimiter='\t', first_line=True)
+            stars_inform = ou.replace_data_in_dcts(stars_inform, ' ', '-')
+            if epoch:
+                stars_inform = calc_today_coordinates(stars_inform, epoch)
+            stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
+            ou.write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
     except OSError as e:
         print(e)
 
