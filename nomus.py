@@ -183,12 +183,10 @@ def main():
             header_NOMAD1, stars_NOMAD1 = ou.open_csv(NOMAD_path, delimiter='\t', first_line=True)
             header_USNO, stars_USNO = ou.open_csv(USNO_path, delimiter='\t', first_line=True)
             stars_all = add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_USNO)
-            print('all: {}'.format(len(stars_all)))
             stars_inform = ou.replace_data_in_dcts(stars_all, ' ', '-')
             if epoch:
                 stars_inform = calc_today_coordinates(stars_inform, epoch)
             stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
-            print('after: {}'.format(len(stars_inform)))
             ou.write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
             os.remove(NOMAD_path)
             os.remove(USNO_path)
