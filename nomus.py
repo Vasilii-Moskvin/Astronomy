@@ -92,6 +92,19 @@ def calc_today_coordinates(stars_from_file, epoch):
     float_epoch = float(epoch) - 2000
 
     for star in stars_from_file:
+        if star['_RAJ2000_tab1'] != '-':
+            ra = '_RAJ2000_tab1'
+            dec = '_DEJ2000_tab1'
+            pm_ra = 'pmRA_tab1'
+            pm_dec = 'pmDE_tab1'
+        else:
+            ra = 'RAJ2000_tab2'
+            dec = 'DEJ2000_tab2'
+            pm_ra = 'pmRA_tab2'
+            pm_dec = 'pmDE_tab2'
+        ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
+        dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
+
         star[dec_by_epoch] = float(star[dec]) + (0.001 * float(star[pm_dec]) * float_epoch) / 3600
         old_cos_dec = math.cos((math.pi / 180) * float(star[dec]))
         new_cos_dec = math.cos((math.pi / 180) * float(star[dec_by_epoch]))
