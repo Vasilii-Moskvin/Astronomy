@@ -36,7 +36,7 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
     os.remove(script_for_Aladin_path)
 
     if os.path.exists(XMatch_NOMAD_USNO_path):
-        return XMatch_NOMAD_USNO_path
+        return XMatch_NOMAD_USNO_path, NOMAD_path, USNO_path
     else:
         return False
 
@@ -101,6 +101,52 @@ def calc_today_coordinates(stars_from_file, epoch):
     return stars_from_file
 
 
+def add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_USNO):
+    '''
+    Adds stars to the XMatch catalogue for which no intersections have been found in the NOMAD1 and USNO-B1 catalogs.
+    :param stars_XMatch: data about stars from XMatch catalogue
+    :param header_NOMAD1: header of data from NOMAD1 catalogue
+    :param stars_NOMAD1: data about stars from NOMAD1 catalogue
+    :param header_USNO: header of data from USNO-B1 catalogue
+    :param stars_USNO: data about stars from USNO-B1 catalogue
+    :return:
+    '''
+    NOMAD_ID_in_XMatch = set(ou.column_from_list_dct(stars_XMatch, 'NOMAD1_tab1'))
+    USNO_ID_in_XMatch = set(ou.column_from_list_dct(stars_XMatch, 'USNO-B1.0_tab2'))
+
+    NOMAD_ID_in_NOMAD = set(ou.column_from_list_dct(stars_NOMAD1, 'NOMAD1'))
+    NOMAD_ID_in_USNO = set(ou.column_from_list_dct(stars_USNO, 'USNO-B1.0'))
+
+    delta_NOMAD = list(NOMAD_ID_in_NOMAD - NOMAD_ID_in_XMatch)
+    delta_USNO = list(NOMAD_ID_in_USNO - USNO_ID_in_XMatch)
+
+    NOMAD_not_in_XMatch = list(filter(lambda x: x['NOMAD1'] in delta_NOMAD, stars_NOMAD1))
+    USNO_not_in_XMatch = list(filter(lambda x: x['USNO-B1.0'] in delta_USNO, stars_USNO))
+
+    empty_NOMAD_in_XMatch = OrderedDict(map(lambda x: ('{}_tab1'.format(x), ' '), header_NOMAD1))
+    empty_USNO_in_XMatch = OrderedDict(map(lambda x: ('{}_tab2'.format(x), ' '), header_USNO))
+
+    convert_NOMAD_in_XMatch = OrderedDict(map(lambda x: (x, '{}_tab1'.format(x)), header_NOMAD1))
+    convert_USNO_in_XMatch = OrderedDict(map(lambda x: (x, '{}_tab2'.format(x)), header_USNO))
+
+    temp_lst = []
+    for src in NOMAD_not_in_XMatch:
+        temp_dct = OrderedDict(map(lambda x: (convert_NOMAD_in_XMatch[x], src[x]), src.keys()))
+        temp_dct.update(empty_USNO_in_XMatch)
+        temp_lst.append(temp_dct)
+
+    for src in USNO_not_in_XMatch:
+        temp_dct = OrderedDict()
+        temp_dct.update(empty_NOMAD_in_XMatch)
+        temp_dct.update(OrderedDict(map(lambda x: (convert_USNO_in_XMatch[x], src[x]), src.keys())))
+        temp_lst.append(temp_dct)
+
+    stars_XMatch.extend(temp_lst)
+
+    return stars_XMatch
+
+
+
 def main():
     save_dir_path = os.path.abspath(input('Enter the path where to save NomUs catalogue:\n'))
     epoch = input('Enter Epoch:\n')
@@ -109,10 +155,13 @@ def main():
     radius = input('Enter radius:\n')
 
     try:
-        XMatch_NOMAD_USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
-        if XMatch_NOMAD_USNO_path:
-            header, stars_inform = ou.open_csv(XMatch_NOMAD_USNO_path, delimiter='\t', first_line=True)
-            stars_inform = ou.replace_data_in_dcts(stars_inform, ' ', '-')
+        XMatch_NOMAD_USNO_path, NOMAD_path, USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
+        if XMatch_NOMAD_USNO_path and NOMAD_path and USNO_path:
+            header_XMatch, stars_XMatch = ou.open_csv(XMatch_NOMAD_USNO_path, delimiter='\t', first_line=True)
+            header_NOMAD1, stars_NOMAD1 = ou.open_csv(NOMAD_path, delimiter='\t', first_line=True)
+            header_USNO, stars_USNO = ou.open_csv(USNO_path, delimiter='\t', first_line=True)
+            stars_all = add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_USNO)
+            stars_inform = ou.replace_data_in_dcts(stars_all, ' ', '-')
             if epoch:
                 stars_inform = calc_today_coordinates(stars_inform, epoch)
             stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
