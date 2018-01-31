@@ -66,3 +66,13 @@ def replace_data_in_dcts(lst, first_symbol, second_symbol):
     lst = [replace_data_in_dct(dct, first_symbol, second_symbol) for dct in lst]
 
     return lst
+
+
+def column_from_list_dct(data, dct_key):
+    '''
+    Gets a list of data from the list of dictionaries by key in dictionaries.
+    :param data: list of dictionaries
+    :param dct_key: key in dictionaries
+    :return: list of data on the key in dictionaries.
+    '''
+    return list(map(lambda x: x[dct_key], data))
