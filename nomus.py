@@ -48,28 +48,40 @@ def convert_XMatch_to_catalogue( stars_inform, epoch=''):
     :return: csv- catalogue
     """
     if epoch:
-        convert_header = OrderedDict((('_RAJ{}_tab1'.format(epoch), 'RAJ{}'.format(epoch)),
-                                      ('_DEJ{}_tab1'.format(epoch), 'DEJ{}'.format(epoch)),
-                                      ('NOMAD1_tab1', 'NOMAD1_ID'),
+        convert_coord_NOMAD = OrderedDict((('_RAJ{}_tab1'.format(epoch), 'RAJ{}'.format(epoch)),
+                                           ('_DEJ{}_tab1'.format(epoch), 'DEJ{}'.format(epoch))))
+        convert_coord_USNO = OrderedDict((('RAJ{}_tab2'.format(epoch), 'RAJ{}'.format(epoch)),
+                                          ('DEJ{}_tab2'.format(epoch), 'DEJ{}'.format(epoch))))
+        convert_data = OrderedDict((('NOMAD1_tab1', 'NOMAD1_ID'),
                                       ('USNO-B1.0_tab2', 'USNO-B1.0'),
                                       ('Bmag_tab1', 'B_mag'),
                                       ('Vmag_tab1', 'V_mag'),
                                       ('Rmag_tab1', 'R_mag'),
                                       ('Imag_tab2', 'I_mag')))
     else:
-        convert_header = OrderedDict((('_RAJ2000_tab1', 'RAJ2000'),
-                                      ('_DEJ2000_tab1', 'DEJ2000'),
-                                      ('NOMAD1_tab1', 'NOMAD1_ID'),
+        convert_coord_NOMAD = OrderedDict((('_RAJ2000_tab1', 'RAJ2000'),
+                                           ('_DEJ2000_tab1', 'DEJ2000')))
+        convert_coord_USNO = OrderedDict((('RAJ2000_tab2', 'RAJ2000'),
+                                          ('DEJ2000_tab2', 'DEJ2000')))
+        convert_data = OrderedDict((('NOMAD1_tab1', 'NOMAD1_ID'),
                                       ('USNO-B1.0_tab2', 'USNO-B1.0'),
                                       ('Bmag_tab1', 'B_mag'),
                                       ('Vmag_tab1', 'V_mag'),
                                       ('Rmag_tab1', 'R_mag'),
                                       ('Imag_tab2', 'I_mag')))
-
-    save_header = list(convert_header.values())
-
-    data_to_csv = [dict(map(lambda key: (convert_header[key], star[key]),
-                            filter(lambda x: x in convert_header, star.keys()))) for star in stars_inform]
+    save_header = list(convert_coord_NOMAD.values())
+    save_header.extend(list(convert_data.values()))
+    data_to_csv = []
+    for star in stars_inform:
+        convert_header = OrderedDict()
+        if star['_RAJ2000_tab1'] != '-':
+            convert_header.update(convert_coord_NOMAD)
+        else:
+            convert_header.update(convert_coord_USNO)
+        convert_header.update(convert_data)
+        temp_dct = dict(map(lambda key: (convert_header[key], star[key]),
+                            filter(lambda x: x in convert_header, star.keys())))
+        data_to_csv.append(temp_dct)
 
     return data_to_csv, save_header
 
@@ -82,12 +94,6 @@ def calc_today_coordinates(stars_from_file, epoch):
     :param epoch: epoch
     :return: XMatch NOMAD1 and USNO-B1 catalogues with added colums of new coordinates
     '''
-    ra = '_RAJ2000_tab1'
-    dec = '_DEJ2000_tab1'
-    pm_ra = 'pmRA_tab1'
-    pm_dec = 'pmDE_tab1'
-    ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
-    dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
 
     float_epoch = float(epoch) - 2000
 
@@ -97,19 +103,22 @@ def calc_today_coordinates(stars_from_file, epoch):
             dec = '_DEJ2000_tab1'
             pm_ra = 'pmRA_tab1'
             pm_dec = 'pmDE_tab1'
+            ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
+            dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
         else:
             ra = 'RAJ2000_tab2'
             dec = 'DEJ2000_tab2'
             pm_ra = 'pmRA_tab2'
             pm_dec = 'pmDE_tab2'
-        ra_by_epoch = '_RAJ{}_tab1'.format(epoch)
-        dec_by_epoch = '_DEJ{}_tab1'.format(epoch)
+            ra_by_epoch = 'RAJ{}_tab2'.format(epoch)
+            dec_by_epoch = 'DEJ{}_tab2'.format(epoch)
 
-        star[dec_by_epoch] = float(star[dec]) + (0.001 * float(star[pm_dec]) * float_epoch) / 3600
+
+        star[dec_by_epoch] = round(float(star[dec]) + (0.001 * float(star[pm_dec]) * float_epoch) / 3600, 7)
         old_cos_dec = math.cos((math.pi / 180) * float(star[dec]))
         new_cos_dec = math.cos((math.pi / 180) * float(star[dec_by_epoch]))
-        star[ra_by_epoch] = float(star[ra]) + \
-                            ((0.001 * float(star[pm_ra]) * float_epoch) / 3600) * (new_cos_dec / old_cos_dec)
+        star[ra_by_epoch] = round(float(star[ra]) + \
+                            ((0.001 * float(star[pm_ra]) * float_epoch) / 3600) * (new_cos_dec / old_cos_dec), 7)
 
     return stars_from_file
 
@@ -174,10 +183,12 @@ def main():
             header_NOMAD1, stars_NOMAD1 = ou.open_csv(NOMAD_path, delimiter='\t', first_line=True)
             header_USNO, stars_USNO = ou.open_csv(USNO_path, delimiter='\t', first_line=True)
             stars_all = add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_USNO)
+            print('all: {}'.format(len(stars_all)))
             stars_inform = ou.replace_data_in_dcts(stars_all, ' ', '-')
             if epoch:
                 stars_inform = calc_today_coordinates(stars_inform, epoch)
             stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
+            print('after: {}'.format(len(stars_inform)))
             ou.write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
     except OSError as e:
         print(e)
