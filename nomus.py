@@ -190,6 +190,8 @@ def main():
             stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
             print('after: {}'.format(len(stars_inform)))
             ou.write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
+            os.remove(NOMAD_path)
+            os.remove(USNO_path)
     except OSError as e:
         print(e)
 
