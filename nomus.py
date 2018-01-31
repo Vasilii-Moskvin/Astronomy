@@ -15,11 +15,15 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
     :return: path to XMatch-file from Aladin
     """
     XMatch_NOMAD_USNO_path = os.path.join(save_dir_path, 'nomus_cat.csv')
+    NOMAD_path = os.path.join(save_dir_path, 'NOMAD_nomus_cat.csv')
+    USNO_path = os.path.join(save_dir_path, 'USNO_nomus_cat.csv')
     script_for_Aladin = ['#AJS',
                          'sync',
                          'get VizieR(NOMAD1) {} {} {}'.format(ra, de, radius),
                          'get VizieR(USNO-B1) {} {} {}'.format(ra, de, radius),
                          'xmatch NOMAD1 USNO-B1 1.0',
+                         'export NOMAD1 {}'.format(NOMAD_path),
+                         'export USNO-B1 {}'.format(USNO_path),
                          'export XMatch {}'.format(XMatch_NOMAD_USNO_path),
                          'quit']
 
@@ -47,6 +51,7 @@ def convert_XMatch_to_catalogue( stars_inform, epoch=''):
         convert_header = OrderedDict((('_RAJ{}_tab1'.format(epoch), 'RAJ{}'.format(epoch)),
                                       ('_DEJ{}_tab1'.format(epoch), 'DEJ{}'.format(epoch)),
                                       ('NOMAD1_tab1', 'NOMAD1_ID'),
+                                      ('USNO-B1.0_tab2', 'USNO-B1.0'),
                                       ('Bmag_tab1', 'B_mag'),
                                       ('Vmag_tab1', 'V_mag'),
                                       ('Rmag_tab1', 'R_mag'),
@@ -55,6 +60,7 @@ def convert_XMatch_to_catalogue( stars_inform, epoch=''):
         convert_header = OrderedDict((('_RAJ2000_tab1', 'RAJ2000'),
                                       ('_DEJ2000_tab1', 'DEJ2000'),
                                       ('NOMAD1_tab1', 'NOMAD1_ID'),
+                                      ('USNO-B1.0_tab2', 'USNO-B1.0'),
                                       ('Bmag_tab1', 'B_mag'),
                                       ('Vmag_tab1', 'V_mag'),
                                       ('Rmag_tab1', 'R_mag'),
