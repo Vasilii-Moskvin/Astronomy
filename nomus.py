@@ -2,7 +2,71 @@ from collections import OrderedDict, namedtuple
 import csv
 import os.path
 import math
-import often_used as ou
+
+
+ALADIN_PATH = r'C:\Aladin.jar'
+
+
+def open_csv(csv_file_path, delimiter=',', first_line=False):
+    '''
+    Open csv file
+    :param csv_file_path: Path to csv-file
+    :param delimiter: delimiter in csv-file
+    :param first_line: Skip (True) the first line or not (False)
+    :return: header and data from csv-file
+    '''
+    with open(csv_file_path, 'r') as csv_file:
+        csv_file = csv.DictReader(csv_file, delimiter=delimiter)
+        header = csv_file.fieldnames
+        if first_line:
+            next(csv_file)
+        stars_from_file = [row for row in csv_file]
+
+    return header, stars_from_file
+
+
+def write_to_csv(save_path, data, header, delimiter=','):
+    '''
+    Writes data in csv-file.
+    :param save_path: savefile path
+    :param data: data
+    :param header: header of data
+    :param delimiter: delimiter
+    :return: csv-file with data
+    '''
+    with open(save_path, 'w', newline='') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=header, delimiter=delimiter)
+        writer.writeheader()
+        writer.writerows(data)
+    if os.path.exists(save_path):
+        print('File {} has created!'.format(save_path))
+    else:
+        print('Error: File {} has no created!'.format(save_path))
+
+
+def replace_data_in_dct(dct, first_symbol, second_symbol):
+    '''
+    Replaces first_symbol with second_symbol in dictionary.
+    :param dct: data from dictionary
+    :param first_symbol: first symbol
+    :param second_symbol: second symbol
+    :return: data with replaced symbols
+    '''
+
+    for key, value in dct.items():
+        if value == first_symbol:
+            dct[key] = second_symbol
+
+    return dct
+
+def column_from_list_dct(data, dct_key):
+    '''
+    Gets a list of data from the list of dictionaries by key in dictionaries.
+    :param data: list of dictionaries
+    :param dct_key: key in dictionaries
+    :return: list of data on the key in dictionaries.
+    '''
+    return list(map(lambda x: x[dct_key], data))
 
 
 def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
@@ -14,6 +78,7 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
     :param radius: radius of area for catalogue
     :return: path to XMatch-file from Aladin
     """
+    global ALADIN_PATH
     XMatch_NOMAD_USNO_path = os.path.join(save_dir_path, 'nomus_cat.csv')
     NOMAD_path = os.path.join(save_dir_path, 'NOMAD_nomus_cat.csv')
     USNO_path = os.path.join(save_dir_path, 'USNO_nomus_cat.csv')
@@ -32,7 +97,7 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
         for line in script_for_Aladin:
             w.write('{}\n'.format(line))
 
-    os.system('java -jar C:\Aladin.jar -script < {}'.format(script_for_Aladin_path))
+    os.system('java -jar {} -script < {}'.format(ALADIN_PATH, script_for_Aladin_path))
     os.remove(script_for_Aladin_path)
 
     if os.path.exists(XMatch_NOMAD_USNO_path):
@@ -133,11 +198,11 @@ def add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_
     :param stars_USNO: data about stars from USNO-B1 catalogue
     :return:
     '''
-    NOMAD_ID_in_XMatch = set(ou.column_from_list_dct(stars_XMatch, 'NOMAD1_tab1'))
-    USNO_ID_in_XMatch = set(ou.column_from_list_dct(stars_XMatch, 'USNO-B1.0_tab2'))
+    NOMAD_ID_in_XMatch = set(column_from_list_dct(stars_XMatch, 'NOMAD1_tab1'))
+    USNO_ID_in_XMatch = set(column_from_list_dct(stars_XMatch, 'USNO-B1.0_tab2'))
 
-    NOMAD_ID_in_NOMAD = set(ou.column_from_list_dct(stars_NOMAD1, 'NOMAD1'))
-    NOMAD_ID_in_USNO = set(ou.column_from_list_dct(stars_USNO, 'USNO-B1.0'))
+    NOMAD_ID_in_NOMAD = set(column_from_list_dct(stars_NOMAD1, 'NOMAD1'))
+    NOMAD_ID_in_USNO = set(column_from_list_dct(stars_USNO, 'USNO-B1.0'))
 
     delta_NOMAD = list(NOMAD_ID_in_NOMAD - NOMAD_ID_in_XMatch)
     delta_USNO = list(NOMAD_ID_in_USNO - USNO_ID_in_XMatch)
@@ -179,15 +244,15 @@ def main():
     try:
         XMatch_NOMAD_USNO_path, NOMAD_path, USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
         if XMatch_NOMAD_USNO_path and NOMAD_path and USNO_path:
-            header_XMatch, stars_XMatch = ou.open_csv(XMatch_NOMAD_USNO_path, delimiter='\t', first_line=True)
-            header_NOMAD1, stars_NOMAD1 = ou.open_csv(NOMAD_path, delimiter='\t', first_line=True)
-            header_USNO, stars_USNO = ou.open_csv(USNO_path, delimiter='\t', first_line=True)
+            header_XMatch, stars_XMatch = open_csv(XMatch_NOMAD_USNO_path, delimiter='\t', first_line=True)
+            header_NOMAD1, stars_NOMAD1 = open_csv(NOMAD_path, delimiter='\t', first_line=True)
+            header_USNO, stars_USNO = open_csv(USNO_path, delimiter='\t', first_line=True)
             stars_all = add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_USNO)
-            stars_inform = ou.replace_data_in_dcts(stars_all, ' ', '-')
+            stars_inform = [replace_data_in_dct(dct, ' ', '-') for dct in stars_all]
             if epoch:
                 stars_inform = calc_today_coordinates(stars_inform, epoch)
             stars_inform, save_header = convert_XMatch_to_catalogue(stars_inform, epoch)
-            ou.write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
+            write_to_csv(XMatch_NOMAD_USNO_path, stars_inform, save_header, delimiter=',')
             os.remove(NOMAD_path)
             os.remove(USNO_path)
     except OSError as e:
