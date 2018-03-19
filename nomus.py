@@ -59,6 +59,7 @@ def replace_data_in_dct(dct, first_symbol, second_symbol):
 
     return dct
 
+
 def column_from_list_dct(data, dct_key):
     '''
     Gets a list of data from the list of dictionaries by key in dictionaries.
@@ -69,7 +70,7 @@ def column_from_list_dct(data, dct_key):
     return list(map(lambda x: x[dct_key], data))
 
 
-def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
+def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14"):
     """
     Gets XMatch-file from Aladin.
     :param save_dir_path: path to save directory for catalogue from Aladin
@@ -84,8 +85,8 @@ def get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius="14'"):
     USNO_path = os.path.join(save_dir_path, 'USNO_nomus_cat.csv')
     script_for_Aladin = ['#AJS',
                          'sync',
-                         'get VizieR(NOMAD1) {} {} {}'.format(ra, de, radius),
-                         'get VizieR(USNO-B1) {} {} {}'.format(ra, de, radius),
+                         'get VizieR(NOMAD1) {} {} {}\''.format(ra, de, radius),
+                         'get VizieR(USNO-B1) {} {} {}\''.format(ra, de, radius),
                          'xmatch NOMAD1 USNO-B1 1.0',
                          'export NOMAD1 {}'.format(NOMAD_path),
                          'export USNO-B1 {}'.format(USNO_path),
@@ -233,13 +234,16 @@ def add_all_stars(stars_XMatch, header_NOMAD1, stars_NOMAD1, header_USNO, stars_
     return stars_XMatch
 
 
-
-def main():
+def start_nomus():
+    '''
+    Starts the program.
+    :return:
+    '''
     save_dir_path = os.path.abspath(input('Enter the path where to save NomUs catalogue:\n'))
-    epoch = input('Enter Epoch:\n')
+    epoch = input('Enter Epoch (by default is 2000):\n')
     ra = input('Enter RA:\n')
     de = input('Enter DE:\n')
-    radius = input('Enter radius:\n')
+    radius = input('Enter radius (arc minute, by default is 14):\n')
 
     try:
         XMatch_NOMAD_USNO_path, NOMAD_path, USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
@@ -260,4 +264,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    start_nomus()
