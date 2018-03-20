@@ -68,7 +68,11 @@ FUNCTIONS
 DATA
     ALADIN_PATH = r'C:\Aladin.jar'
 
+FILE
+    https://github.com/Vasilii-Moskvin/Astronomy/blob/master/nomus/nomus.py
+
 EXAMPLES
+    >python nomus.py
     Enter the path where to save NomUs catalogue:
     C:\Users\vasil\Desktop\
     Enter Epoch (by default is 2000):
@@ -81,4 +85,5 @@ EXAMPLES
     30
     File C:\Users\vasil\Desktop\nomus_cat.csv has created!
 
+SETTINGS
     The input format for RA and DE is the same as in the Aladin's scripts.
