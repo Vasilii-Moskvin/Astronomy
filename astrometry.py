@@ -3,8 +3,9 @@ import re
 from pyfits import open as pyfits_open
 
 
-USE_SEXTRACTOR = '--use-sextractor ' # if you want to use SExtractor in the work of solve-field's.
-#USE_SEXTRACTOR = ''                 # if you don't want to use SExtractor in the work of solve-field.
+USE_SEXTRACTOR = '--use-sextractor '
+
+
 def is_float_digit(value):
     """
     Checks whether the value is a floating-point number.
