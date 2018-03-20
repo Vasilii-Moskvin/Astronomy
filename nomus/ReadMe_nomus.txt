@@ -86,4 +86,5 @@ EXAMPLES
     File C:\Users\vasil\Desktop\nomus_cat.csv has created!
 
 SETTINGS
+    Set path to Aladin.jar. 7 line in the file, the value of ALADIN_PATH.
     The input format for RA and DE is the same as in the Aladin's scripts.
