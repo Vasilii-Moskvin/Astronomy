@@ -4,12 +4,11 @@ NAME
     astrometry
 
 FUNCTIONS
-    astrometry(dir_path, fit_files)
+    astrometry(dir_path)
         Runs the solve-field soft for the list of fit-files. If header of fit-file has not empty values of 'RA' and 'DEC',
         then to the solve-field will be uses these values. Renames new-files to fits-files (astrometry returns
         fits files with name: 'files.new'). Deletes excess files (astrometry returns many excess files).
-        :param dir_path: path to directory with fit_files
-        :param fit_files: path to fit-files
+        :param dir_path: path to directory with fit-files
         :return: fits-files with astrometrical calibrations located in dir_path folder
 
     is_float_digit(value)
