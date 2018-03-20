@@ -14,15 +14,15 @@ def is_float_digit(value):
     return re.findall(r'^[-+]?\d+\.?\d*$', value)
 
 
-def astrometry(dir_path, fit_files):
+def astrometry(dir_path):
     """
     Runs the solve-field soft for the list of fit-files. If header of fit-file has not empty values of 'RA' and 'DEC',
     then to the solve-field will be uses these values. Renames new-files to fits-files (astrometry returns
     fits files with name: 'files.new'). Deletes excess files (astrometry returns many excess files).
-    :param dir_path: path to directory with fit_files
-    :param fit_files: path to fit-files
+    :param dir_path: path to directory with fit-files
     :return: fits-files with astrometrical calibrations located in dir_path folder
     """ 
+    fit_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fit')]
     for file in sorted(fit_files, key=lambda x: x.name):
         pre_filename = file.path.split('.')[0]
         try:
@@ -75,8 +75,7 @@ def start_astrometry():
     :return: results of astrometry(dir_path, fit_files) 
     '''
     dir_path = os.path.abspath(input('Enter the path to directory:\n'))
-    fit_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fit')]
-    astrometry(dir_path, fit_files)
+    astrometry(dir_path)
     os.system('chmod -R 777 {}'.format(dir_path))
 
 
