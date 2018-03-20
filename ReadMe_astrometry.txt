@@ -34,5 +34,5 @@ EXAMPLES
 
 SETTINGS:
     Copy astrometry.py to folder with solve-field file.
-    If you want to use SExtractor in the work of solve-field set: USE_SEXTRACTOR = '--use-sextractor '.
-    If you don't want to use SExtractor in the work of solve-field set: USE_SEXTRACTOR = ''.
+    If you want to use SExtractor in the work of solve-field set (6 line in the file): USE_SEXTRACTOR = '--use-sextractor '.
+    If you don't want to use SExtractor in the work of solve-field set (6 line in the file): USE_SEXTRACTOR = ''.
