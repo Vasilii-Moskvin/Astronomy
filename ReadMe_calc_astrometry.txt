@@ -1,7 +1,7 @@
 Help on module astrometry:
 
 NAME
-    astrometry
+    calc_astrometry
 
 FUNCTIONS
     astrometry(dir_path)
