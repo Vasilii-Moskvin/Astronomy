@@ -12,7 +12,7 @@ import copy
 import matplotlib
 import matplotlib.pyplot as plt
 from seaborn import heatmap
-import json
+from calc_astrometry import astrometry
 
 ABC = namedtuple('ABC', ('a', 'b', 'c'))
 
@@ -28,13 +28,6 @@ class StarFromCSV(OrderedDict):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
         self.get_static_info(*args)
-    
-    @classmethod
-    def reset_class_data(cls):
-        cls.header = []
-        cls.filts = []
-        cls.n_fields = OrderedDict()
-        cls.mag_fields_name = OrderedDict()
 
     @classmethod
     def get_static_info(cls, *args):
@@ -137,8 +130,6 @@ class StarFromCSV(OrderedDict):
 
         return filt2
 
-# ----------------------------------------------------astrometry-------------------------------------------------------
-
 def getheader(filepath):
     """
     Returns header of the file (filepath)
@@ -156,64 +147,6 @@ def writecsv(filepath, header, data):
         writer.writeheader()
         writer.writerows(data)
 
-    print('File {} has created'.format(filepath))
-
-
-def astrometry(dirpath):
-    """
-    Runs the solve-field soft for the list of fit-files. If header of fit-file has not empty values of 'RA' and 'DEC',
-    then to the solve-field is transferred the values these fields. Renames new-files to fits-files (astrometry returns
-     fits files with name: 'files.new'). Deletes excess files (astrometry returns many excess files).
-    :param fit_path: path to fit-files
-    :return: different files, that were produced during the operation, including fits-files with the extension new
-    """
-    fitfiles = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)
-                if os.path.isfile(os.path.join(dirpath, filename))
-                and filename.endswith('.fit')]
-    solve_field = './solve-field'
-
-    for filepath in sorted(fitfiles):
-        header = getheader(filepath)
-        try:
-            if 'RA' in header and 'DEC' in header:
-                if header['RA'] and header['DEC']:
-                    os.system('{} --ra {} --dec {} --radius 0.5 --use-sextractor {}'.format(solve_field,
-                                                                                        header['RA'],
-                                                                                        header['DEC'],
-                                                                                        filepath))
-            else:
-                os.system('{} --use-sextractor {}'.format(solve_field, filepath))
-        except PermissionError as e:
-            print(e)
-
-        pre_filename = re.findall(r'^(.+)\.fit$', filepath)[0]
-        try:
-            os.rename('{}.{}'.format(pre_filename, 'new'),
-                      '{}.{}'.format(pre_filename, 'fits'))
-            os.system('chmod 777 {}'.format('{}.{}'.format(pre_filename, 'fits')))
-        except OSError as e:
-            print(e)
-
-        try:
-            os.remove(filepath)
-        except OSError as e:
-            print(e)
-
-        delfiles = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)
-                    if os.path.isfile(os.path.join(dirpath, filename))
-                    and not filename.endswith('.fit')
-                    and not filename.endswith('.fits')
-                    and not filename.endswith('_cat.csv')]
-
-        for filepath in delfiles:
-            try:
-                os.remove(filepath)
-            except OSError as e:
-                print(e)
-
-# ---------------------------------------------------------------------------------------------------------------------
-
-
 # ---------------------------------------------------S-Extractor-------------------------------------------------------
 
 
@@ -223,16 +156,16 @@ def sextractor(dirpath):
     :param dirpath: the directory where ara placed fits-files
     :return: the result of the s-extractor
     """
-    fitsfiles = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)
-                 if filename.endswith('.fits')]
+    fit_files = [file for file in os.scandir(dirpath) if file.name.endswith('.fits')]
 
     m_date = OrderedDict()
     m_frame = list()
+    print(fit_files)
 
-    for filepath in sorted(fitsfiles):
+    for file in sorted(fit_files, key=lambda x: x.name):
 
-        file_frame, file_filt = re.findall(r'.*-(\d+)_(\w+)\.fits', filepath)[0]
-        JD = str(getheader(filepath)['JD'])
+        file_frame, file_filt = re.findall(r'.*-(\d+)_(\w+)\.fits$', file.path)[0]
+        JD = str(getheader(file.path)['JD'])
         if file_frame not in m_frame:
             m_frame.append(file_frame)
         if file_filt in m_date:
@@ -240,10 +173,10 @@ def sextractor(dirpath):
         else:
             m_date[file_filt] = {file_frame: JD}
 
-        file_prename = re.findall(r'^(.+)\.fits$', filepath)[0]
+        file_prename = re.findall(r'^(.+)\.fits$', file.path)[0]
         sexpath = '{}_sex.txt'.format(file_prename)
         try:
-            os.system('sextractor -CATALOG_NAME {} -c daofind.sex {}'.format(sexpath, filepath))
+            os.system('sextractor -CATALOG_NAME {} -c daofind.sex {}'.format(sexpath, file.path))
         except OSError as e:
             print(e)
         except UnicodeDecodeError as e:
@@ -293,62 +226,11 @@ def inst_catalogue(dirpath, catpath):
     fullinstcat(dirpath)
 
 
-def column_from_csv(data, column_name):
-    return list(map(lambda x: x[column_name], data))
-
-
-def not_match_object(sexpath, XMatchfile):
-    sex_header, sex_data = open_csv(sexpath, ',')
-    match_header, match_data = open_csv(XMatchfile, '\t')
-    coord = list(zip(column_from_csv(match_data, 'ALPHA_J2000_tab2'), column_from_csv(match_data, 'DELTA_J2000_tab2')))
-    not_match_data = list(filter(lambda x: (x['ALPHA_J2000'], x['DELTA_J2000']) not in coord, sex_data))
-
-    return not_match_data, sex_header
-
-
-def update_catalogue(dirpath, sexpath, catpath):
-    batpath = os.path.join(dirpath, 'bat.ajs')
-    with open(batpath, 'w') as f:
-        XMatchfile = '{}_XMatch.csv'.format(re.findall(r'(.+)_sex\.csv$', sexpath)[0])
-        data_to_Aladin = ['#AJS',
-                          'sync',
-                          'load {}'.format(sexpath),
-                          'load {}'.format(catpath),
-                          'xmatch {} {} 1.0'.format(catpath.split(os.sep)[-1], sexpath.split(os.sep)[-1]),
-                          'export XMatch {}'.format(XMatchfile),
-                          'quit']
-
-        for line in data_to_Aladin:
-            f.write('{}\n'.format(line))
-
-    os.system('java -jar /home/crao/Astronomy/Soft/Aladin/Aladin/Aladin.jar -script < {}'.format(batpath))
-    # os.system('java -jar C:\Aladin.jar -script < {}'.format(batpath))
-
-    try:
-        not_match_data, sex_header = not_match_object(sexpath, XMatchfile)
-        os.remove(XMatchfile)
-    except OSError as e:
-        print(e)
-
-    cat_header, cat_data = open_csv(catpath, ',')
-    for src in not_match_data:
-        temp = {'RAJ2000': src['ALPHA_J2000'], 'DEJ2000': src['DELTA_J2000']}
-        for src_1 in cat_header:
-            if src_1 not in temp:
-                temp[src_1] = '-'
-        cat_data.append(temp)
-
-    writecsv(catpath, cat_header, cat_data)
-
-
-
-
 def cross_with_catalogue(dirpath, catpath):
     sexfiles = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)
                 if filename.endswith('_sex.csv')]
 
     for sexpath in sorted(sexfiles):
-        update_catalogue(dirpath, sexpath, catpath)
         batpath = os.path.join(dirpath, 'bat.ajs')
         with open(batpath, 'w') as f:
             XMatchfile = '{}_XMatch.csv'.format(re.findall(r'(.+)_sex\.csv$', sexpath)[0])
@@ -365,6 +247,7 @@ def cross_with_catalogue(dirpath, catpath):
 
         os.system('java -jar /home/crao/Astronomy/Soft/Aladin/Aladin/Aladin.jar -script < {}'.format(batpath))
         #os.system('java -jar C:\Aladin.jar -script < {}'.format(batpath))
+
 
         filt = re.findall(r'.*_(\w+)_sex.csv$', sexpath.split(os.sep)[-1])[0].upper()
 
@@ -395,6 +278,7 @@ def cross_with_catalogue(dirpath, catpath):
 
             writecsv(XMatchfile, list(header.values()), data)
 
+            print('File {} has created'.format(XMatchfile))
             os.remove(sexpath)
         except OSError as e:
             print(e)
@@ -498,23 +382,18 @@ def fullinstcat(dirpath):
                     if int(row[field]) > 1:
                         new_data.append(row)
                         break
-        try:
-            os.remove(filepath)
-        except OSError as e:
-            print(e)
 
-    print('data = {}\nnew_data = {}\n'.format(len(data), len(new_data)))
     writecsv(os.path.join(dirpath,'{}_fullinstcat.csv'.format(re.findall(r'^(\w+?)_.*', matchfiles[0].split(os.sep)[-1])[0])),
              header, new_data)
 
 
 
-def open_csv(csv_file_path, delimiter=','):
+def open_csv(csv_file_path):
     with open(csv_file_path, 'r') as f:
         header = f.readline().strip().split(',')
 
     with open(csv_file_path, 'r') as csv_file:
-        csv_file = csv.DictReader(csv_file, delimiter=delimiter)
+        csv_file = csv.DictReader(csv_file, delimiter=',')
         data = [row for row in csv_file]
 
     return header, data
@@ -598,7 +477,7 @@ def write_csv(save_file_path, data, header):
 def produce_corr_analysis(dir_path, data, to_sys_data, obj):
     ref_stars = ''
 
-    #to_sys_data = smoothing(to_sys_data, 3)
+    to_sys_data = smoothing(to_sys_data, 3)
 
     for filt in StarFromCSV.filts:
         temp_ten = sorted(filter(lambda x: '{}_{}'.format(x['RAJ2000'], x['DEJ2000']) != obj, to_sys_data),
@@ -918,17 +797,12 @@ def make_reducted_catalogue(ABC_by_filt, data):
     return make_data
 
 
-def load_JSON_list(path_to_json):
-    with open(path_to_json) as json_file:
-        inf_json = json.load(json_file)
-
-    return inf_json
-
-
-def go(dir_path):
+def main():
+    dir_path = os.path.abspath(input('Enter the path to directory:\n'))
+    #obj = input('Enter the RA and DE of object (RA_DE):\n')
     obj = '303.381794_+65.162131'
 
-    #astrometry(dir_path)
+    astrometry(dir_path)
     sextractor(dir_path)
     cat_path = [os.path.join(dir_path, file_name) for file_name in os.listdir(dir_path) if file_name.endswith('_cat.csv')][0]
     inst_catalogue(dir_path, cat_path)
@@ -948,21 +822,5 @@ def go(dir_path):
     save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
 
 
-
-def main():
-    path_to_data = os.path.abspath(input('Enter the path to json:\n'))
-    lst_json = load_JSON_list(path_to_data)
-    #dir_path = os.path.abspath(input('Enter the path to directory:\n'))
-    #obj = input('Enter the RA and DE of object (RA_DE):\n')
-    for dir_path in lst_json:
-        go(dir_path)
-        StarFromCSV.reset_class_data()
-
-
-def main1():
-    dir_path = os.path.abspath(input('Enter the path to directory:\n'))
-    go(dir_path)
-
-
 if __name__ == '__main__':
-    main1()
+    main()
