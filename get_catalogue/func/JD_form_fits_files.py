@@ -4,12 +4,17 @@ import re
 from collections import OrderedDict
 
 
-def JD_form_fits_files(dir_path):
-    fit_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fits')]
-
+def JD_form_fits_files(dir_path, fits_files):
+    '''
+    Reads headers of fits-files and gets information about frame's number and julian date. 
+    Saves the result in frameJD.txt
+    :param fits_files: list of information about fits-files
+    :param dir_path: path to folder with fits-files
+    :return: frameJD.txt with information about the Julian Date in frames divided by filters.
+    '''
     m_date = OrderedDict()
     m_frame = list()
-    for file in sorted(fit_files, key=lambda x: x.name):
+    for file in sorted(fits_files, key=lambda x: x.name):
         file_frame, file_filt = re.findall(r'.*-(\d+)_(\w+)\.fits$', file.path)[0]
         with pyfits.open(file.path) as f:
             JD = str(f[0].header['JD'])
@@ -31,4 +36,5 @@ def JD_form_fits_files(dir_path):
                 else:
                     temp.append('-')
             f.write('{}\n'.format(','.join(temp)))
+            
     return save_path
