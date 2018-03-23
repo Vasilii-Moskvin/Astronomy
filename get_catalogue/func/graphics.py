@@ -1,7 +1,10 @@
 import matplotlib.ticker
 import matplotlib.pyplot as plt
 import os.path
+import numpy as np
 from seaborn import heatmap
+from func.StarFromCSV import StarFromCSV
+from func.work_with_csv import get_column
 
 
 def save_correlogram(dir_path, rhosns, filt):
@@ -80,3 +83,25 @@ def save_regress(save_path, x, y, y_mnk, tlt, x_lbl, y_lbl, legend_lbl):
                   frameon=None,
                   fmt='svg')
     plt.close()
+
+
+def save_regress_line(dir_path, reducted_catalogue, ABC_by_filt):
+    for filt in StarFromCSV.filts:
+        x = get_column(reducted_catalogue, '{}_avr_mag'.format(filt))
+        y = get_column(reducted_catalogue, '{}_mag_cat'.format(filt))
+
+        A = np.vstack([x, np.ones(len(x))]).T
+        k, b = np.linalg.lstsq(A, y)[0]
+
+        y_mnk = [k * i + b for i in x]
+
+        save_name = os.path.join(dir_path, 'regress_{}'.format(filt))
+        xlab = 'Instrumental catalogue, mag'
+        ylab = 'Catalogue, mag'
+        tlt = 'Catalohue vs instrumental magnitudes ({} filter)'.format(filt)
+        if ABC_by_filt[filt].b != 0:
+            filt2 = StarFromCSV.choose_filter(filt)
+            legendtxt = '${}_c={:.3}*{}_i{:+.3}*({}_i-{}_i){:+.3}$\n$y={:.3}*x{:+.3}$'.format(filt, ABC_by_filt[filt].a, filt, ABC_by_filt[filt].b, filt2, filt, ABC_by_filt[filt].c, k, b)
+        else:
+            legendtxt = '${}_c={:.3}*{}_i{:+.3}$\n$y={:.3}*x{:+.3}$'.format(filt, ABC_by_filt[filt].a, filt, ABC_by_filt[filt].c, k, b)
+        save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, save_name)
