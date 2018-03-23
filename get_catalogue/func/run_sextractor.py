@@ -3,16 +3,13 @@ import re
 from func.work_with_csv import write_csv
 
 
-
-def sextractor(dir_path):
+def sextractor(fits_files):
     """
     Runs s-extractor for files from the dirpath
-    :param dirpath: the directory where ara placed fits-files
+    :param fits_files: list of information about fits-files
     :return: the result of the s-extractor
     """
-    fit_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fits')]
-
-    for file in sorted(fit_files, key=lambda x: x.name):
+    for file in sorted(fits_files, key=lambda x: x.name):
         file_prename = re.findall(r'^(.+)\.fits$', file.path)[0]
         sex_path = '{}_sex.txt'.format(file_prename)
         try:
@@ -41,6 +38,7 @@ def sextractor(dir_path):
         except OSError as e:
             print(e)
 
+
 def start_sextractor():
     '''
     Asks the user for the address with the fits-files. Starts sextractor(dir_path). 
@@ -48,7 +46,8 @@ def start_sextractor():
     :return: catalogues of objects from fits-files plased in the dir_path.
     '''
     dir_path = os.path.abspath(input('Enter the path to directory:\n'))
-    sextractor(dir_path)
+    fits_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fits')]
+    sextractor(fits_files)
     os.system('chmod -R 777 {}'.format(dir_path))
 
 
