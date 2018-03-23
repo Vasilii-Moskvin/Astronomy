@@ -28,7 +28,7 @@ def main():
     to_sys_data = build_catalogues(data, 'to_sys')
     write_catalogue(dir_path, to_sys_data, prefix_full_cat, 'inst', 'to_sys')
 
-    ref_stars, data_corr, to_sys_data_corr = produce_corr_analysis(dir_path, data, to_sys_data, obj)
+    data_corr, to_sys_data_corr = produce_corr_analysis(dir_path, data, to_sys_data, obj)
     write_catalogue(dir_path, data_corr, prefix_full_cat, 'corr', 'full')
     write_catalogue(dir_path, to_sys_data_corr, prefix_full_cat, 'corr', 'to_sys')
 
