@@ -55,3 +55,13 @@ def write_csv(save_path, header, data, delimiter=','):
         print('File {} has created!'.format(save_path))
     else:
         print('Error: File {} has no created!'.format(save_path))
+
+
+def get_column(data, field_name):
+    '''
+    Gets a list of dictionaries and a field name from the dictionaries. Return a list of values from the dictionaries by the field name.
+    :param data: a list of dictionaries.
+    :param field_name: a field name from the dictionaries.
+    :return: list of values from the dictionaries by the field name.
+    '''
+    return list(map(lambda x: x[field_name], data))
