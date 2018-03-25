@@ -35,40 +35,6 @@ def save_correlogram(dir_path, rhosns, filt):
     plt.close()
 
 
-def save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, save_path):
-    '''
-    Constructs and saves a regressin line.
-    :param x: values along the X axis.
-    :param y: values along the Y axis.
-    :param y_mnk: values of the regressin line along the Y axis.
-    :param legendtxt: text in the graphics legend.
-    :param xlab: signature to the X axis.
-    :param ylab: signature to the Y axis.
-    :param tlt: title of the graph.
-    :param save_path: the path to save the file.
-    :return: saved images of regression lines.
-    '''
-    plt.plot(x, y_mnk, label=legendtxt)
-    plt.legend(loc=2)
-    plt.plot(x, y, 'ro')
-    plt.xlabel(xlab)
-    plt.ylabel(ylab)
-    plt.title(tlt)
-    plt.grid(True)
-    plt.savefig(save_path,
-                  dpi=None,
-                  facecolor='w',
-                  edgecolor='w',
-                  orientation='portrait',
-                  parpertype=None,
-                  format=None,
-                  transparent=False,
-                  bbox_inches=None,
-                  pad_inches=0.1,
-                  frameon=None)
-    plt.close()
-
-
 def save_regress(save_path, x, y, y_mnk, tlt, x_lbl, y_lbl, legend_lbl):
     '''
     Constructs and saves a regressin line.
@@ -90,7 +56,7 @@ def save_regress(save_path, x, y, y_mnk, tlt, x_lbl, y_lbl, legend_lbl):
     frame.set_color('white')
     frame.set_edgecolor('black')
 
-    plt.axis([9, 16, 9, 16])
+    #plt.axis([9, 16, 9, 16])
     formatter = matplotlib.ticker.FormatStrFormatter("%.0f")
     plt.xticks(fontsize=14, fontname='Times')
     plt.yticks(fontsize=14, fontname='Times')
