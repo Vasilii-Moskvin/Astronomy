@@ -6,8 +6,8 @@ from func.cross_with_catalogue import cross_with_catalogue
 from func.full_inst_cat import full_inst_cat
 from func.build_catalogue import load_catalogue, build_catalogues, write_catalogue
 from func.corr_analysis import produce_corr_analysis
-from func.make_reduction import make_reducted_catalogue, get_ABC
-from func.graphics import save_correlogram, save_mnk, save_regress, save_regress_line
+from func.make_reduction import make_reducted_catalogue, get_ABC, save_regress_line
+from func.graphics import save_correlogram, save_mnk, save_regress
 from func.StarFromCSV import StarFromCSV
 from func.work_with_csv import open_dict_csv, write_dict_csv
 
@@ -32,11 +32,10 @@ def main():
     write_catalogue(dir_path, data_corr, prefix_full_cat, 'corr', 'full')
     write_catalogue(dir_path, to_sys_data_corr, prefix_full_cat, 'corr', 'to_sys')
 
-    ABC_by_filt = get_ABC(to_sys_data_corr)
-    reducted_catalogue = make_reducted_catalogue(ABC_by_filt, to_sys_data_corr)
+    reducted_catalogue, ABC_by_filt = make_reducted_catalogue(to_sys_data_corr)
+    save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
 
     write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
-    save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
 
 
 if __name__ == '__main__':
