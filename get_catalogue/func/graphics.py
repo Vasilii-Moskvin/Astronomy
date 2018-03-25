@@ -8,6 +8,13 @@ from func.work_with_csv import get_column
 
 
 def save_correlogram(dir_path, rhosns, filt):
+    '''
+    Constructs and saves a correlogram.
+    :param dir_path: path to the work folder.
+    :param rhosns: data for the construction of a correlogram.
+    :param filt: filter, for the data of which a correlogram is constructs.
+    :return: files with a saved correlogram.
+    '''
     heatmap(rhosns, annot=True, fmt=".3f", linewidths=.5)
     plt.yticks(rotation=0)
     plt.title('Correlogram of stars with the least error ({} filter)\n'.format(filt), fontsize=16)
@@ -28,7 +35,19 @@ def save_correlogram(dir_path, rhosns, filt):
     plt.close()
 
 
-def save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, savename):
+def save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, save_path):
+    '''
+    Constructs and saves a regressin line.
+    :param x: values along the X axis.
+    :param y: values along the Y axis.
+    :param y_mnk: values of the regressin line along the Y axis.
+    :param legendtxt: text in the graphics legend.
+    :param xlab: signature to the X axis.
+    :param ylab: signature to the Y axis.
+    :param tlt: title of the graph.
+    :param save_path: the path to save the file.
+    :return: saved images of regression lines.
+    '''
     plt.plot(x, y_mnk, label=legendtxt)
     plt.legend(loc=2)
     plt.plot(x, y, 'ro')
@@ -36,7 +55,7 @@ def save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, savename):
     plt.ylabel(ylab)
     plt.title(tlt)
     plt.grid(True)
-    plt.savefig(savename,
+    plt.savefig(save_path,
                   dpi=None,
                   facecolor='w',
                   edgecolor='w',
@@ -51,6 +70,18 @@ def save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, savename):
 
 
 def save_regress(save_path, x, y, y_mnk, tlt, x_lbl, y_lbl, legend_lbl):
+    '''
+    Constructs and saves a regressin line.
+    :param save_path: the path to save the file.
+    :param x: values along the X axis.
+    :param y: values along the Y axis.
+    :param y_mnk: values of the regressin line along the Y axis.
+    :param tlt: title of the graph.
+    :param x_lab: signature to the X axis.
+    :param y_lab: signature to the Y axis.
+    :param legend_lbl: text in the graphics legend.
+    :return: saved images of regression lines.
+    '''
     plt.plot(x, y, linestyle=' ', marker='.', color='grey')
     plt.plot(x, y_mnk, color='red', label=legend_lbl)
 
@@ -83,25 +114,3 @@ def save_regress(save_path, x, y, y_mnk, tlt, x_lbl, y_lbl, legend_lbl):
                   frameon=None,
                   fmt='svg')
     plt.close()
-
-
-def save_regress_line(dir_path, reducted_catalogue, ABC_by_filt):
-    for filt in StarFromCSV.filts:
-        x = get_column(reducted_catalogue, '{}_avr_mag'.format(filt))
-        y = get_column(reducted_catalogue, '{}_mag_cat'.format(filt))
-
-        A = np.vstack([x, np.ones(len(x))]).T
-        k, b = np.linalg.lstsq(A, y)[0]
-
-        y_mnk = [k * i + b for i in x]
-
-        save_name = os.path.join(dir_path, 'regress_{}'.format(filt))
-        xlab = 'Instrumental catalogue, mag'
-        ylab = 'Catalogue, mag'
-        tlt = 'Catalohue vs instrumental magnitudes ({} filter)'.format(filt)
-        if ABC_by_filt[filt].b != 0:
-            filt2 = StarFromCSV.choose_filter(filt)
-            legendtxt = '${}_c={:.3}*{}_i{:+.3}*({}_i-{}_i){:+.3}$\n$y={:.3}*x{:+.3}$'.format(filt, ABC_by_filt[filt].a, filt, ABC_by_filt[filt].b, filt2, filt, ABC_by_filt[filt].c, k, b)
-        else:
-            legendtxt = '${}_c={:.3}*{}_i{:+.3}$\n$y={:.3}*x{:+.3}$'.format(filt, ABC_by_filt[filt].a, filt, ABC_by_filt[filt].c, k, b)
-        save_mnk(x, y, y_mnk, legendtxt, xlab, ylab, tlt, save_name)
