@@ -55,7 +55,6 @@ def build_catalogues(data, key):
     output_data = [src for src in data if reduce(type_cat[key],
                                                  map(lambda field: src[field] == StarFromCSV.n_fields[field],
                                                                    StarFromCSV.n_fields.keys()))]
-
     if key == 'to_sys':
         for src in output_data:
             temp = dict(map(lambda x: (x, src[x]),filter(lambda x: re.findall(r'.*_cat', x),  StarFromCSV.header)))
