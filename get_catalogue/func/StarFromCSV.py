@@ -21,6 +21,17 @@ class StarFromCSV(OrderedDict):
         self.get_static_info(*args)
 
     @classmethod
+    def reset_class_data(cls):
+        '''
+        Resets values for class variables StarFromCSV.
+        :return: reseted values: header, filts, n_fields, mag_fields_name.
+        '''
+        cls.header = []
+        cls.filts = []
+        cls.n_fields = OrderedDict()
+        cls.mag_fields_name = OrderedDict()
+
+    @classmethod
     def get_static_info(cls, *args):
         '''
         Fills class information about filters, frame numbers, and statistical fields.
