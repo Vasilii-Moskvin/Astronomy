@@ -44,6 +44,7 @@ def get_catalogue():
     save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
 
     write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
+    StarFromCSV.reset_class_data()
 
 
 if __name__ == '__main__':
