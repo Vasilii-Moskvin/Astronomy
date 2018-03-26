@@ -7,12 +7,20 @@ from func.full_inst_cat import full_inst_cat
 from func.build_catalogue import load_catalogue, build_catalogues, write_catalogue
 from func.corr_analysis import produce_corr_analysis
 from func.make_reduction import make_reducted_catalogue, get_ABC, save_regress_line
-from func.graphics import save_correlogram, save_mnk, save_regress
+from func.graphics import save_correlogram, save_regress
 from func.StarFromCSV import StarFromCSV
 from func.work_with_csv import open_dict_csv, write_dict_csv
 
 
-def main():
+def get_catalogue():
+    '''
+    Reades fit-files and *._cat.csv in the folder dir_path. Produces astrometric calibration over the fit-files.
+    Produces photometry over the fits-files in the SExtractor software. Produces a compilation catalogue of objects
+    from data received after processing in the SExtractor software. Produces a correlation analysis of data in this catalogue,
+    to find and take into account distortions obtained in the process of astronomical observations. Reduction of the received data
+    to the reference catalog system, which is in the file *._cat.csv.
+    :return: istrumental and reduced catalogs, reduction lines, correlograms for a particular filter.
+    '''
     dir_path = os.path.abspath(input('Enter the path to directory:\n'))
     #obj = input('Enter the RA and DE of object (RA_DE):\n')
     obj = '303.381794_+65.162131'
@@ -39,4 +47,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    get_catalogue()
