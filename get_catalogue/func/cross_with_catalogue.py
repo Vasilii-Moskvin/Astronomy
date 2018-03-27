@@ -20,7 +20,7 @@ def cross_with_catalogue(dir_path, cat_path, two_flag):
     sex_files = [file.path for file in os.scandir(dir_path) if file.name.endswith('_sex.csv')]
     for sex_path in sorted(sex_files):
         if two_flag:
-            update_catalogue(dirpath, sexpath, catpath)
+            update_catalogue(dir_path, sex_path, cat_path)
         XMatchfile = get_XMatchcat_from_Aladin(dir_path, sex_path, cat_path)
         Aladin_cat_to_csv(sex_path, XMatchfile)
 
@@ -143,4 +143,4 @@ def update_catalogue(dir_path, sex_path, cat_path):
                 temp[src_1] = '-'
         cat_data.append(temp)
 
-    write_dict_csv(catpath, cat_header, cat_data)
+    write_dict_csv(cat_path, cat_header, cat_data)
