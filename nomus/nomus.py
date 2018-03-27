@@ -243,7 +243,8 @@ def start_nomus():
     epoch = input('Enter Epoch (by default is 2000):\n')
     ra = input('Enter RA:\n')
     de = input('Enter DE:\n')
-    radius = input('Enter radius (arc minute, by default is 14):\n')
+    r = input('Enter radius (arc minute, by default is 14):\n').strip()
+    radius = r if r else '14'
 
     try:
         XMatch_NOMAD_USNO_path, NOMAD_path, USNO_path = get_XMatch_NOMAD_USNO(save_dir_path, ra, de, radius)
