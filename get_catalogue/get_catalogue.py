@@ -21,15 +21,21 @@ def get_catalogue():
     to the reference catalog system, which is in the file *._cat.csv.
     :return: istrumental and reduced catalogs, reduction lines, correlograms for a particular filter.
     '''
-    dir_path = os.path.abspath(input('Enter the path to directory:\n'))
+    input_txt = input('Enter the path to directory:\n').strip()
+    input_lst = input_txt.split()
+    two_flag = False
+    if len(input_lst) == 2 and input_lst[1] == '--two':
+        two_flag = True
+    dir_path = os.path.abspath(input_lst[0])
     #obj = input('Enter the RA and DE of object (RA_DE):\n')
     obj = '303.381794_+65.162131'
+    
     fit_files = [file for file in os.scandir(dir_path) if file.name.endswith('.fit')]
     fits_files = astrometry(dir_path, fit_files)
     JD_path = JD_form_fits_files(dir_path, fits_files)
     sextractor(fits_files)
     cat_path = [file.path for file in os.scandir(dir_path) if file.name.endswith('_cat.csv')][0]
-    cross_with_catalogue(dir_path, cat_path)
+    cross_with_catalogue(dir_path, cat_path, two_flag)
     full_inst_cat_path = full_inst_cat(dir_path, JD_path)
 
     data, prefix_full_cat = load_catalogue(dir_path, full_inst_cat_path)
