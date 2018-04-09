@@ -16,7 +16,7 @@ def produce_corr_analysis(dir_path, data, to_sys_data, obj):
     :return: data with corrected trend. The first one for data from the compilation catalogue. 
     The second one for processed data from the compilation catalogue.
     '''
-    to_sys_data = smoothing(to_sys_data, 3)
+    #to_sys_data = smoothing(to_sys_data, 3)
 
     for filt in StarFromCSV.filts:
         ten_good = ten_best_star(dir_path, to_sys_data, obj, filt)
