@@ -6,7 +6,7 @@ from func.cross_with_catalogue import cross_with_catalogue
 from func.full_inst_cat import full_inst_cat
 from func.build_catalogue import load_catalogue, build_catalogues, write_catalogue
 from func.corr_analysis import produce_corr_analysis
-from func.make_reduction import make_reducted_catalogue, get_ABC, save_regress_line
+from func.make_reduction import make_reducted_catalogue, make_reducted_catalogue_1, get_ABC, save_regress_line
 from func.graphics import save_correlogram, save_regress
 from func.StarFromCSV import StarFromCSV
 from func.work_with_csv import open_dict_csv, write_dict_csv
@@ -40,16 +40,24 @@ def get_catalogue():
 
     data, prefix_full_cat = load_catalogue(dir_path, full_inst_cat_path)
     to_sys_data = build_catalogues(data, 'to_sys')
-    write_catalogue(dir_path, to_sys_data, prefix_full_cat, 'inst', 'to_sys')
+    # write_catalogue(dir_path, to_sys_data, prefix_full_cat, 'inst', 'to_sys')
 
     data_corr, to_sys_data_corr = produce_corr_analysis(dir_path, data, to_sys_data, obj)
     write_catalogue(dir_path, data_corr, prefix_full_cat, 'corr', 'full')
-    write_catalogue(dir_path, to_sys_data_corr, prefix_full_cat, 'corr', 'to_sys')
+    # write_catalogue(dir_path, to_sys_data_corr, prefix_full_cat, 'corr', 'to_sys')
 
     reducted_catalogue, ABC_by_filt = make_reducted_catalogue(to_sys_data_corr)
     save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
 
-    write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
+    if len(StarFromCSV.filts) == 1:
+        full_reduction_cat = make_reducted_catalogue_1(data_corr, ABC_by_filt)
+        write_catalogue(dir_path, full_reduction_cat, prefix_full_cat, '', 'result')
+        two_reduction_cat = make_reducted_catalogue_1(data_corr, ABC_by_filt, two=True)
+        write_catalogue(dir_path, two_reduction_cat, prefix_full_cat, 'two', 'result')
+    else:
+        write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
+
+
     StarFromCSV.reset_class_data()
 
 
