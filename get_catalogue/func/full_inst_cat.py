@@ -71,19 +71,19 @@ def fill_full_cat(dir_path, fields):
                 star_coord = (star['RAJ2000'], star['DEJ2000'])
                 if star_coord in stars_in_full_cat:
                     temp_index = stars_in_full_cat.index(star_coord)
-                    full_data[temp_index][XM_mag_field] = star[XM_mag_field]
+                    full_data[temp_index][XM_mag_field] = str(round(float(star[XM_mag_field]), 4))
                     full_data[temp_index][XM_cat_mag_field] = star[XM_cat_mag_field]
                 else:
                     full_data.append(OrderedDict([(field, '-') for field in fields]))
                     full_data[-1]['RAJ2000'] = star['RAJ2000']
                     full_data[-1]['DEJ2000'] = star['DEJ2000']
-                    full_data[-1][XM_mag_field] = star[XM_mag_field]
+                    full_data[-1][XM_mag_field] = str(round(float(star[XM_mag_field]), 4))
                     full_data[-1][XM_cat_mag_field] = star[XM_cat_mag_field]
             else:
                 full_data.append(OrderedDict([(field, '-') for field in fields]))
                 full_data[-1]['RAJ2000'] = star['RAJ2000']
                 full_data[-1]['DEJ2000'] = star['DEJ2000']
-                full_data[-1][XM_mag_field] = star[XM_mag_field]
+                full_data[-1][XM_mag_field] = str(round(float(star[XM_mag_field]), 4))
                 full_data[-1][XM_cat_mag_field] = star[XM_cat_mag_field]
     full_data.sort(key=lambda x: x['RAJ2000'])
     prefix_name_cat = re.findall(r'^(\w+?)-.*', match_files[0].name)[0]
@@ -107,8 +107,8 @@ def calc_stat_data(full_data, dct_fields, filts):
             if value_m_fields:
                 star['{}_min_mag'.format(filt)] = min(value_m_fields)
                 star['{}_max_mag'.format(filt)] = max(value_m_fields)
-                star['{}_avr_mag'.format(filt)] = np.mean(value_m_fields)
-                star['{}_std_mag'.format(filt)] = np.std(value_m_fields)
+                star['{}_avr_mag'.format(filt)] = round(np.mean(value_m_fields), 4)
+                star['{}_std_mag'.format(filt)] = round(np.std(value_m_fields), 4)
                 star['{}_n'.format(filt)] = len(value_m_fields)
             else:
                 star['{}_min_mag'.format(filt)] = '-'
