@@ -89,6 +89,23 @@ def make_reducted_catalogue(to_sys_data_corr):
     return make_data, ABC_by_filt
 
 
+def make_reducted_catalogue_1(data, ABC_by_filt, two=False):
+    if two:
+        make_data = list(filter(lambda star: all(list(map(lambda x: int(star[x]) > 2, StarFromCSV.n_fields))), copy.deepcopy(data)))
+    else:
+        make_data = copy.deepcopy(data)
+
+    if len(StarFromCSV.filts) == 1:
+        for star in make_data:
+            star.reduction_AC(ABC_by_filt)
+    else:
+        # for star in make_data:
+        #     star.reduction_ABC(ABC_by_filt)
+        return None
+
+    return make_data
+
+
 def save_regress_line(dir_path, reducted_catalogue, ABC_by_filt):
     '''
     Prepareses data and settings for saving regression lines. Saves regression lines.
