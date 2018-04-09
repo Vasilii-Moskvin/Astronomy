@@ -93,7 +93,7 @@ class StarFromCSV(OrderedDict):
 
         for key, value in self.mag_values[filt].items():
             if value != '-':
-                self[key] = a * value + c
+                self[key] = round(a * value + c, 4)
 
         self.update_stat_mag_by_filter(filt)
 
@@ -112,7 +112,7 @@ class StarFromCSV(OrderedDict):
             filt2 = self.choose_filter(filt1)
             for key_filt1, key_filt2 in zip(mag_values[filt1], mag_values[filt2]):
                 if self[key_filt1] != '-' and self[key_filt1] != '-':
-                    self[key_filt1] = a * mag_values[filt1][key_filt1] + b * (mag_values[filt2][key_filt2] - mag_values[filt1][key_filt1]) + c
+                    self[key_filt1] = round(a * mag_values[filt1][key_filt1] + b * (mag_values[filt2][key_filt2] - mag_values[filt1][key_filt1]) + c, 4)
                 else:
                     self[key_filt1] = '-'
 
@@ -154,8 +154,8 @@ class StarFromCSV(OrderedDict):
         if mags:
             self['{}_min_mag'.format(filt)] = max(mags)
             self['{}_max_mag'.format(filt)] = min(mags)
-            self['{}_avr_mag'.format(filt)] = np.mean(mags)
-            self['{}_std_mag'.format(filt)] = np.std(mags)
+            self['{}_avr_mag'.format(filt)] = round(np.mean(mags), 4)
+            self['{}_std_mag'.format(filt)] = round(np.std(mags), 4)
         else:
             self['{}_min_mag'.format(filt)] = '-'
             self['{}_max_mag'.format(filt)] = '-'
