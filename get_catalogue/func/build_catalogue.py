@@ -82,7 +82,7 @@ def write_catalogue(dir_path, data, prefix, postfix, key):
     dct_file_name = dict(full='{}_full_{}.csv'.format(prefix, postfix),
                          good='{}_good_{}.csv'.format(prefix, postfix),
                          to_sys='{}_tosys_{}.csv'.format(prefix, postfix),
-                         result='{}_result_{}.csv'.format(prefix, postfix))
+                         result='{}_result_{}.csv'.format(prefix, postfix),)
 
     save_file_path = os.path.join(dir_path, dct_file_name[key])
     write_dict_csv(save_file_path, StarFromCSV.header, data)
