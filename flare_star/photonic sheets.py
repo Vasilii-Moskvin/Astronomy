@@ -318,7 +318,7 @@ def divide_b_tip_one(src, photo):
     '''
     if math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star:
         temp = Curve(*src, in_star='star')
-    elif photo.radius_star + photo.gap < math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star + photo.gap + photo.width_bkgnd:
+    elif photo.radius_star + photo.gap < math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star + photo.gap + photo.width_bkgnd and src.y < 200:
         temp = Curve(*src, in_star='background')
     else:
         temp = Curve(*src, in_star='other')
@@ -406,7 +406,7 @@ def convert_data_to_signal(lst_divide_by_time, ratio):
 def main():
     #file_path = os.path.abspath(input('Enter the path to file with data:\n'))
     path_json = r'C:\Users\vasil\YandexDisk\WorkPlace\Scripts\Git\Nomus\flare_star\settings.json'
-    file_path = r'C:\Users\vasil\Desktop\101203_07_full_crop.ascii'
+    file_path = r'C:\Users\vasil\Desktop\081228_02_1.ascii'
     settings_photometry = None
     data_for_lc = None
     time = None
@@ -442,6 +442,11 @@ def main():
                 view_lc(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
             else:
                 print('Load the data to build a light curve. (enter: "upload file lc").')
+        elif ans == 'view lc':
+            if all([time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta]):
+                view_lc(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
+            else:
+                print('Load the data to build a light curve. (enter: "get lc").')
         elif ans == 'save lc':
             if all([time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta]):
                 save_graph_path = pre_filename + '_lc.png'
