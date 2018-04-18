@@ -46,16 +46,15 @@ def get_catalogue():
     write_catalogue(dir_path, data_corr, prefix_full_cat, 'corr', 'full')
     # write_catalogue(dir_path, to_sys_data_corr, prefix_full_cat, 'corr', 'to_sys')
 
-    reducted_catalogue, ABC_by_filt = make_reducted_catalogue(to_sys_data_corr)
-    save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
-
     if len(StarFromCSV.filts) == 1:
+        reducted_catalogue, ABC_by_filt = make_reducted_catalogue(to_sys_data_corr)
+        save_regress_line(dir_path, reducted_catalogue, ABC_by_filt)
         full_reduction_cat = make_reducted_catalogue_1(data_corr, ABC_by_filt)
         write_catalogue(dir_path, full_reduction_cat, prefix_full_cat, '', 'result')
         two_reduction_cat = make_reducted_catalogue_1(data_corr, ABC_by_filt, two=True)
         write_catalogue(dir_path, two_reduction_cat, prefix_full_cat, 'two', 'result')
-    else:
-        write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
+    #else:
+    #    write_catalogue(dir_path, reducted_catalogue, prefix_full_cat, '', 'result')
 
 
     StarFromCSV.reset_class_data()
