@@ -59,6 +59,7 @@ def fill_full_cat(dir_path, fields):
     NUMBER_FILTER_XM = r'.*-(\d+)_(\w+)_XMatch.csv$'
     match_files = [file for file in os.scandir(dir_path) if file.name.endswith('XMatch.csv')]
     match_files.sort(key=lambda x: re.findall(NUMBER_FILTER_XM, x.name)[0][::-1])
+    prefix_name_cat = re.findall(r'^(\w+?)-.*', match_files[0].name)[0]
     full_data = list()
     for file_XM in match_files:
         m_num, filt = re.findall(NUMBER_FILTER_XM, file_XM.name)[0]
@@ -85,8 +86,11 @@ def fill_full_cat(dir_path, fields):
                 full_data[-1]['DEJ2000'] = star['DEJ2000']
                 full_data[-1][XM_mag_field] = str(round(float(star[XM_mag_field]), 4))
                 full_data[-1][XM_cat_mag_field] = star[XM_cat_mag_field]
+        try:
+        os.remove(file_XM.path)
+            except OSError as e:
+        print(e)
     full_data.sort(key=lambda x: x['RAJ2000'])
-    prefix_name_cat = re.findall(r'^(\w+?)-.*', match_files[0].name)[0]
 
     return full_data, prefix_name_cat
 
