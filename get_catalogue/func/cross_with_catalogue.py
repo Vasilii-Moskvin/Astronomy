@@ -126,7 +126,7 @@ def update_catalogue(dir_path, sex_path, cat_path):
         for line in data_to_Aladin:
             f.write('{}\n'.format(line))
 
-    os.system('java -jar /home/crao/Astronomy/Soft/Aladin/Aladin/Aladin.jar -script < {}'.format(bat_path))
+    os.system('java -jar {} -script < {}'.format(PATH_TO_ALADIN, bat_path))
     # os.system('java -jar C:\Aladin.jar -script < {}'.format(bat_path))
 
     try:
