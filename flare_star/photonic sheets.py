@@ -1,4 +1,4 @@
-from func.graph_flare import draw_full_frame, draw_aperture, draw_LC
+from func.graph_flare import draw_full_frame, draw_aperture, draw_LC, draw_LC_1, draw_LC_2
 from func.Eat import Eat
 from collections import namedtuple
 import math
@@ -10,10 +10,18 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 from numba import jit
 from PIL import Image
+import JDN
+import re
+import logging
+import imageio
+
+logging.basicConfig(filename="logger.log", filemode='w', level=logging.DEBUG)
+
 
 Photometry = namedtuple('Photometry', ('x', 'y', 'radius_star', 'gap', 'width_bkgnd'))
 RAW_Curve = namedtuple('RAW_Curve', ('time', 'x', 'y'))
 Curve = namedtuple('Curve', ('time', 'x', 'y', 'in_star'))
+JD_data = namedtuple('JD_data', ('name', 'year', 'month', 'day', 'hour', 'min', 'sec'))
 
 def set_photometry(xy, path_json):
     ans = ''
@@ -33,7 +41,7 @@ def set_photometry(xy, path_json):
             photometry_settings = None
             break
         else:
-            print("Wrong key specified. Enter file or auto")
+            mprint("Wrong key specified. Enter file or auto")
 
     return photometry_settings
 
@@ -99,18 +107,36 @@ def write_dict_csv(save_path, header, data, delimiter=','):
         writer.writeheader()
         writer.writerows(data)
     if os.path.exists(save_path):
-        print('File {} has created!'.format(save_path))
+        mprint('File {} has created!'.format(save_path))
     else:
-        print('Error: File {} has no created!'.format(save_path))
+        mprint('Error: File {} has no created!'.format(save_path))
+
+
+def open_dict_csv(csv_file_path, delimiter=',', first_line=False):
+    '''
+    Open csv file
+    :param csv_file_path: Path to csv-file
+    :param delimiter: delimiter in csv-file
+    :param first_line: Skip (True) the first line or not (False)
+    :return: header and data from csv-file
+    '''
+    with open(csv_file_path, 'r') as csv_file:
+        csv_file = csv.DictReader(csv_file, delimiter=delimiter)
+        header = csv_file.fieldnames
+        if first_line:
+            next(csv_file)
+        data = [row for row in csv_file]
+
+    return header, data
 
 
 def save_json_photo(json_path, settings_photometry):
     with open(json_path, "w", encoding="utf-8") as file:
         json.dump(settings_photometry._asdict(), file)
     if os.path.exists(json_path):
-        print('File {} has created!'.format(json_path))
+        mprint('File {} has created!'.format(json_path))
     else:
-        print('Error: File {} has no created!'.format(json_path))
+        mprint('Error: File {} has no created!'.format(json_path))
 
 
 def save_graph_lc(save_path, time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta):
@@ -129,9 +155,50 @@ def save_graph_lc(save_path, time, signal, err_signal, bkgnd, err_bkgnd, delta, 
                   fmt='png')
     plt.close()
     if os.path.exists(save_path):
-        print('File {} has created!'.format(save_path))
+        mprint('File {} has created!'.format(save_path))
     else:
-        print('Error: File {} has no created!'.format(save_path))
+        mprint('Error: File {} has no created!'.format(save_path))
+
+def save_graph_lc_1(save_path, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta):
+    draw_LC_1(JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
+    plt.savefig(save_path,
+                  dpi=400,
+                  facecolor='w',
+                  edgecolor='w',
+                  orientation='portrait',
+                  parpertype=None,
+                  format=None,
+                  transparent=False,
+                  bbox_inches=None,
+                  pad_inches=0.1,
+                  frameon=None,
+                  fmt='png')
+    plt.close()
+    if os.path.exists(save_path):
+        mprint('File {} has created!'.format(save_path))
+    else:
+        mprint('Error: File {} has no created!'.format(save_path))
+
+
+def save_graph_lc_2(save_path, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta, time_interval):
+    draw_LC_2(JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta, time_interval)
+    plt.savefig(save_path,
+                  dpi=400,
+                  facecolor='w',
+                  edgecolor='w',
+                  orientation='portrait',
+                  parpertype=None,
+                  format=None,
+                  transparent=False,
+                  bbox_inches=None,
+                  pad_inches=0.1,
+                  frameon=None,
+                  fmt='png')
+    plt.close()
+    if os.path.exists(save_path):
+        mprint('File {} has created!'.format(save_path))
+    else:
+        mprint('Error: File {} has no created!'.format(save_path))
 
 
 def save_aperture(xy, photo, save_path):
@@ -151,9 +218,9 @@ def save_aperture(xy, photo, save_path):
                   fmt='png')
     plt.close()
     if os.path.exists(save_path):
-        print('File {} has created!'.format(save_path))
+        mprint('File {} has created!'.format(save_path))
     else:
-        print('Error: File {} has no created!'.format(save_path))
+        mprint('Error: File {} has no created!'.format(save_path))
 
 
 
@@ -199,7 +266,7 @@ def crop_data(file_path, x_0, y_0, crop_value):
     with open(save_path, 'w') as f:
         for line in data:
             f.write(line)
-    print('File {} has created!'.format(save_path))
+    mprint('File {} has created!'.format(save_path))
     del data
     Eat()
 
@@ -215,7 +282,7 @@ def view_light_curve():
 
 
 def generate_xy(file_path):
-    print('Downloading image ...')
+    mprint('Downloading image ...')
     n = 512
     xy = np.zeros((n, n))
 
@@ -224,7 +291,7 @@ def generate_xy(file_path):
             if line[0] != '#':
                 temp_1 = line.strip().split()
                 xy[int(temp_1[2])][int(temp_1[1])] += 1
-    print('Image uploaded.')
+    mprint('Image uploaded.')
 
     return xy
 
@@ -254,11 +321,11 @@ def open_new_data(file_path, photo):
         for line in f:
             if line[0] != '#':
                 temp_1 = line.strip().split()
-                src = [float(temp_1[0]), int(temp_1[1]), int(temp_1[2])]
                 if flag:
-                    time_start = src[0]
+                    time_start = float(temp_1[0]) 
                     flag = False
-                src[0] = src[0] - time_start
+                src = (float(temp_1[0]) - time_start, int(temp_1[1]), int(temp_1[2]))
+                #if 2500 <= src[0] <= 2600:
                 src = RAW_Curve(*src)
                 data.append(divide_b_tip_one(src, photo))
 
@@ -318,7 +385,7 @@ def divide_b_tip_one(src, photo):
     '''
     if math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star:
         temp = Curve(*src, in_star='star')
-    elif photo.radius_star + photo.gap < math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star + photo.gap + photo.width_bkgnd and src.y < 200:
+    elif photo.radius_star + photo.gap < math.sqrt((src.x - photo.x) ** 2 + (src.y - photo.y) ** 2) <= photo.radius_star + photo.gap + photo.width_bkgnd:
         temp = Curve(*src, in_star='background')
     else:
         temp = Curve(*src, in_star='other')
@@ -403,10 +470,127 @@ def convert_data_to_signal(lst_divide_by_time, ratio):
     return time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta
 
 
+def get_JD_from_time(time, my_data_JD):
+    JD_0 = JDN.get_JD(my_data_JD.year,
+                      my_data_JD.month,
+                      my_data_JD.day,
+                      my_data_JD.hour,
+                      my_data_JD.min,
+                      my_data_JD.sec)
+    JD = [JDN.get_JD(my_data_JD.year,
+                      my_data_JD.month,
+                      my_data_JD.day,
+                      my_data_JD.hour,
+                      my_data_JD.min,
+                      float(my_data_JD.sec) + t) for t in time]
+
+    return JD
+
+
+def start_auto():
+    path_json = r'C:\Users\vasil\Desktop\qwe.json'
+    data = json.load(open(path_json))
+    for ph_sheet in data:
+        try:
+            data_to_auto(ph_sheet)
+            mprint('{:-^40}'.format('end'))
+        except Exception as e:
+            logging.error('{}: {}'.format(e, ph_sheet))
+
+def mprint(s):
+    logging.info(s)
+    print(s)
+
+
+def create_gif_animation(filenames, save_path):
+
+    with imageio.get_writer(save_path, mode='I') as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+            os.remove(filename)
+
+    if os.path.exists(save_path):
+        mprint('File {} has created!'.format(save_path))
+    else:
+        mprint('Error: File {} has no created!'.format(save_path))
+
+
+def data_to_auto(ph_sheet):
+    mprint(re.findall(r'^(\d{6}_\d{2})', ph_sheet['ascii'])[0])
+    tmp_ascii_path = os.path.join(ph_sheet['path'], ph_sheet['ascii'])
+    tmp_json_path = os.path.join(ph_sheet['path'], ph_sheet['json'])
+       
+    settings_photometry = Photometry(**json.load(open(tmp_json_path)))
+
+    mprint('>upload file xy')
+    xy = generate_xy(tmp_ascii_path)
+
+    mprint('>save aperture')
+    save_ap_path = tmp_ascii_path[:-6] + '_aperture.png'
+    save_aperture(xy, settings_photometry, save_ap_path)
+
+    mprint('>upload file lc')
+    data_for_lc = open_new_data(tmp_ascii_path, settings_photometry)
+    sq_star, sq_bkgnd, ratio = get_square(data_for_lc)
+
+    for time_interval in (0.1, 1):
+        mprint('time_interval: {}'.format(time_interval))
+        mprint('>get lc')
+        pre_filename = tmp_ascii_path[:-6] + '_{}sec'.format(time_interval)
+        lst_divide_by_time, count_quantums = divide_by_time(data_for_lc, time_interval)
+        Eat()
+        time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta = convert_data_to_signal(lst_divide_by_time, ratio)
+        
+        mprint('>save lc')
+        save_graph_path = pre_filename + '_lc.png'
+        save_graph_path2 = pre_filename + '_lc2.png'
+        save_json_path = pre_filename + '_lc.json'
+        save_csv_path = pre_filename + '_lc.csv'
+
+        header_JD, data_JD = open_dict_csv('LC_to_UT.txt')
+        my_data_JD = None
+        for src in data_JD:
+            if src['name'] == re.findall(r'^(\d{6}_\d{2})', ph_sheet['ascii'])[0]:
+                my_data_JD = JD_data(**src)
+                break
+        else:
+            mprint('There is no the name in the list.')
+
+        if my_data_JD is not None:
+            JD = get_JD_from_time(time, my_data_JD)
+            header_csv = ['time', 'JD', 'signal', 'err_signal', 'bkgnd', 'err_bkgnd', 'delta', 'err_delta']
+            data = list(zip(time, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta))
+            data_csv = []
+            for src in data:
+                temp = dict(zip(header_csv, src))
+                data_csv.append(temp)
+        save_graph_lc_1(save_graph_path, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
+        save_graph_lc_2(save_graph_path2, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta, time_interval)
+        save_json_photo(save_json_path, settings_photometry)
+        write_dict_csv(save_csv_path, header_csv, data_csv, delimiter=',')
+
+    mprint('>Preparation for obtaining images')
+    gif_file_path = tmp_ascii_path[:-6] + '.gif'
+    time_interval = 10
+    lst_divide_by_time, count_quantums = divide_by_time(data_for_lc, time_interval)
+    Eat()
+    mprint('>save png --> gif')
+    time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta = convert_data_to_signal(lst_divide_by_time, ratio)
+    x_star, y_star, x_background_in, y_background_in, x_background_out, y_background_out = circle_coord(settings_photometry)
+    show_field(lst_divide_by_time, settings_photometry.x, settings_photometry.y, x_star, y_star, x_background_in, y_background_in, x_background_out, y_background_out, signal, bkgnd, time_interval)
+    convert_png_to_gif()
+
+    mprint('>create gif animation')
+    filenames = list(map(lambda x: x.path, os.scandir('C:\\Users\\vasil\\Desktop\\2\\gif\\')))
+    create_gif_animation(filenames, gif_file_path)
+
+
+
 def main():
     #file_path = os.path.abspath(input('Enter the path to file with data:\n'))
     path_json = r'C:\Users\vasil\YandexDisk\WorkPlace\Scripts\Git\Nomus\flare_star\settings.json'
-    file_path = r'C:\Users\vasil\Desktop\081228_02_1.ascii'
+    file_path = r'C:\Users\vasil\Desktop\12\130103_00_crop.ascii'
     settings_photometry = None
     data_for_lc = None
     time = None
@@ -418,8 +602,8 @@ def main():
     err_delta = None
     xy = None
     ans = ''
-    pre_filename = file_path[:-6]
     time_interval = 10
+    pre_filename = file_path[:-6] + '_{}sec'.format(time_interval)
     lst_divide_by_time = None
     while True:
         ans = input('Your ans: ').strip()
@@ -430,7 +614,7 @@ def main():
             if settings_photometry:
                 data_for_lc = open_new_data(file_path, settings_photometry)
             else:
-                print('Load the photometry data (enter: "set aperture").')
+                mprint('Load the photometry data (enter: "set aperture").')
             # file_path = os.path.abspath(input('Enter path to photonic sheet: ').strip())
         elif ans == 'get lc':
             if data_for_lc is not None:
@@ -441,37 +625,66 @@ def main():
                 time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta = convert_data_to_signal(lst_divide_by_time, ratio)
                 view_lc(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
             else:
-                print('Load the data to build a light curve. (enter: "upload file lc").')
+                mprint('Load the data to build a light curve. (enter: "upload file lc").')
         elif ans == 'view lc':
             if all([time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta]):
                 view_lc(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
             else:
-                print('Load the data to build a light curve. (enter: "get lc").')
+                mprint('Load the data to build a light curve. (enter: "get lc").')
         elif ans == 'save lc':
             if all([time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta]):
                 save_graph_path = pre_filename + '_lc.png'
+                save_graph_path2 = pre_filename + '_lc2.png'
                 save_json_path = pre_filename + '_lc.json'
                 save_csv_path = pre_filename + '_lc.csv'
-                header_csv = ['time', 'signal', 'err_signal', 'bkgnd', 'err_bkgnd', 'delta', 'err_delta']
-                data = list(zip(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta))
-                data_csv = []
-                for src in data:
-                    temp = dict(zip(header_csv, src))
-                    data_csv.append(temp)
-                save_graph_lc(save_graph_path, time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
-                save_json_photo(save_json_path, settings_photometry)
-                write_dict_csv(save_csv_path, header_csv, data_csv, delimiter=',')
+                mprint(pre_filename)
+                ans = input('Enter the file name to calc Julian date (without name - no): ').strip()
+                if ans != 'no':
+                    header_JD, data_JD = open_dict_csv('LC_to_UT.txt')
+                    my_data_JD = None
+                    for src in data_JD:
+                        if src['name'] == ans:
+                            my_data_JD = JD_data(**src)
+                            break
+                    else:
+                        mprint('There is no the name in the list. (enter: "save lc")')
+
+                    if my_data_JD is not None:
+                        JD = get_JD_from_time(time, my_data_JD)
+                        header_csv = ['time', 'JD', 'signal', 'err_signal', 'bkgnd', 'err_bkgnd', 'delta', 'err_delta']
+                        data = list(zip(time, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta))
+                        data_csv = []
+                        for src in data:
+                            temp = dict(zip(header_csv, src))
+                            data_csv.append(temp)
+                    save_graph_lc_1(save_graph_path, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
+                    save_graph_lc_2(save_graph_path2, JD, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta, time_interval)
+                    save_json_photo(save_json_path, settings_photometry)
+                    write_dict_csv(save_csv_path, header_csv, data_csv, delimiter=',')
+
+
+
+                else:
+                    header_csv = ['time', 'signal', 'err_signal', 'bkgnd', 'err_bkgnd', 'delta', 'err_delta']
+                    data = list(zip(time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta))
+                    data_csv = []
+                    for src in data:
+                        temp = dict(zip(header_csv, src))
+                        data_csv.append(temp)
+                    save_graph_lc(save_graph_path, time, signal, err_signal, bkgnd, err_bkgnd, delta, err_delta)
+                    save_json_photo(save_json_path, settings_photometry)
+                    write_dict_csv(save_csv_path, header_csv, data_csv, delimiter=',')
             else:
-                print('No data to save. (enter: "get lc").')
+                mprint('No data to save. (enter: "get lc").')
         elif ans == 'save aperture':
             if settings_photometry:
                 if xy is not None:
                     save_ap_path = pre_filename + '_aperture.png'
                     save_aperture(xy, settings_photometry, save_ap_path)
                 else:
-                    print('No data to save. (enter: "upload file xy").')
+                    mprint('No data to save. (enter: "upload file xy").')
             else:
-                print('No data to save. (enter: "set aperture").')
+                mprint('No data to save. (enter: "set aperture").')
         elif ans == 'view':
             view_full_frame(xy)
         elif ans == 'save png':
@@ -481,15 +694,15 @@ def main():
                     show_field(lst_divide_by_time, settings_photometry.x, settings_photometry.y, x_star, y_star, x_background_in, y_background_in, x_background_out, y_background_out, signal, bkgnd, time_interval)
                     convert_png_to_gif()
                 else:
-                    print("There is no division of the photon sheet by time (enter: 'upload file lc' -> 'get lc')")
+                    mprint("There is no division of the photon sheet by time (enter: 'upload file lc' -> 'get lc')")
             else:
-                print('No data of photometry. (enter: "set aperture").')
+                mprint('No data of photometry. (enter: "set aperture").')
         elif ans == 'view aperture':
             if not settings_photometry:
                 settings_photometry = set_photometry(xy, path_json)
             view_aperture(xy, settings_photometry)
         elif ans == 'view photometry':
-            print(settings_photometry)
+            mprint(settings_photometry)
         elif ans == 'save photometry':
             save_json_photo("settings.json", settings_photometry)
         elif ans == 'set aperture':
@@ -504,7 +717,7 @@ def main():
                     if settings_photometry:
                         crop_file_path = crop_data(file_path, settings_photometry.x, settings_photometry.y, crop_value)
                     else:
-                        print('Load the photometry data (enter: "set aperture").')
+                        mprint('Load the photometry data (enter: "set aperture").')
                     break
                 elif crop_ans == 'n':
                     crop_value = int(input('Enter the crop_value: ').strip())
@@ -513,14 +726,15 @@ def main():
                     crop_file_path = crop_data(file_path, x_0, y_0, crop_value)
                     break
                 else:
-                    print("Wrong key specified")
+                    mprint("Wrong key specified")
 
             
         elif ans == 'q':
             break
         else:
-            print("Wrong key specified")
+            mprint("Wrong key specified")
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    start_auto()
