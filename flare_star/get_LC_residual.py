@@ -2,11 +2,18 @@ import csv
 import os
 import pylab
 import numpy as np
+from collections import namedtuple, deque
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 #import seaborn as sns
 import math
+import matplotlib as mpl
+mpl.rcParams['agg.path.chunksize'] = 1000000000
+
+
+LightCurve = namedtuple('LightCurve', ('time', 'ampl', 'err_ampl', 'smooth_ampl', 'smooth_err'))
+LightCurve1 = namedtuple('LightCurve1', ('time', 'delta_diff_ampl'))
 
 graph2D_titel = dict(DP='D’Agostino and Pearson test. p-value',
                      KS='Kolmogorov-Smirnov test. p-value',
@@ -29,6 +36,8 @@ def open_csv(file_path):
             temp_dct[key] = float(value)
         data.append(temp_dct)
 
+    data = list(filter(lambda x: x['delta'] != 0, data))
+
     return header, data
 
 
@@ -39,26 +48,44 @@ def column_from_csv(data, column_name):
 def lc_data(data):
     time = column_from_csv(data, 'time')
     #ampl = list(sg.detrend(column_from_csv(data, 'ampl'), type='constant'))
-    ampl = column_from_csv(data, 'ampl')
-    err_ampl = column_from_csv(data, 'err_ampl')
+    ampl = column_from_csv(data, 'delta')
+    err_ampl = column_from_csv(data, 'err_delta')
 
     return time, ampl, err_ampl
+
+
+# def smooth_ampl_fun(ampl, err, n):
+#     ampl_1 = list(ampl)
+#     err_1 = list(err)
+#     smooth_ampl = ampl_1[:int(n / 2)]
+#     smooth_err = err_1[:int(n / 2)]
+#     for index, value in enumerate(ampl_1):
+#         if index >= int(n / 2) and index < len(ampl_1) - int(n / 2):
+#             temp_ampl = ampl_1[index - int(n / 2):index + int(n / 2): 1]
+#             temp_err = err[index - int(n / 2):index + int(n / 2): 1]
+#             new_ampl, new_err = mean_std(temp_ampl, temp_err)
+#             smooth_ampl.append(new_ampl)
+#             smooth_err.append(new_err)
+#     smooth_ampl.extend(ampl[int(-n / 2):])
+#     smooth_err.extend(err_1[int(-n / 2):])
+
+#     return np.array(smooth_ampl), np.array(smooth_err)
 
 
 def smooth_ampl_fun(ampl, err, n):
     ampl_1 = list(ampl)
     err_1 = list(err)
-    smooth_ampl = ampl_1[:int(n / 2)]
-    smooth_err = err_1[:int(n / 2)]
+    smooth_ampl = ampl_1[:int(n)]
+    smooth_err = err_1[:int(n)]
     for index, value in enumerate(ampl_1):
-        if index >= int(n / 2) and index < len(ampl_1) - int(n / 2):
-            temp_ampl = ampl_1[index - int(n / 2):index + int(n / 2): 1]
-            temp_err = err[index - int(n / 2):index + int(n / 2): 1]
+        if index < len(ampl_1) - int(n):
+            temp_ampl = ampl_1[index:index + int(n): 1]
+            temp_err = err[index:index + int(n): 1]
             new_ampl, new_err = mean_std(temp_ampl, temp_err)
             smooth_ampl.append(new_ampl)
             smooth_err.append(new_err)
-    smooth_ampl.extend(ampl[int(-n / 2):])
-    smooth_err.extend(err_1[int(-n / 2):])
+    # smooth_ampl.extend(ampl[int(-n / 2):])
+    # smooth_err.extend(err_1[int(-n / 2):])
 
     return np.array(smooth_ampl), np.array(smooth_err)
 
@@ -85,19 +112,22 @@ def mean_std0(x_i, err_i):
     err_i = np.array(err_i)
 
     n = len(x_i)
-    C = np.mean(err_i)
-    p_i = (C ** 2) / (err_i ** 2)
+    # C = np.mean(err_i)
+
+    # p_i = (C ** 2) / (err_i ** 2)
+    p_i = 1 / err_i
     p = sum(p_i)
 
     mean_x0 = (1 / p) * sum(p_i * x_i)
-    sigma_eps = C / math.sqrt(p)
-    sigma_star = math.sqrt((1 / (n - 1)) * (sum(p_i * x_i ** 2) - p * mean_x0 ** 2))
-    sigma_star_eps = sigma_star / math.sqrt(p)
+    # sigma_eps = C / math.sqrt(p)
+    # sigma_star = math.sqrt((1 / (n - 1)) * (sum(p_i * x_i ** 2)))# - p * mean_x0 ** 2))
+    std_output = math.sqrt((1 / (n - 1)) * (sum(p_i * x_i ** 2)))
+    # sigma_star_eps = sigma_star / math.sqrt(p)
 
-    if sigma_eps > sigma_star_eps:
-        std_output = 0.5 * (sigma_eps + sigma_star_eps)
-    else:
-        std_output = sigma_star_eps
+    # if sigma_eps > sigma_star_eps:
+    #     std_output = 0.5 * (sigma_eps + sigma_star_eps)
+    # else:
+    #     std_output = sigma_star_eps
 
     std_x0 = std_output / math.sqrt(n)
 
@@ -110,13 +140,17 @@ def mean_std(x_i, err_i):
     return mean_x0, std_x0 + std_output
 
 
-def draw_LSNR(time, ampl, err_ampl, smooth_ampl, smooth_err, delta_diff_ampl):
+def draw_LSNR(time, ampl, err_ampl, smooth_ampl, smooth_err, delta_diff_ampl, flare_list):
     number = 2
     f, axarr = plt.subplots(number, sharex=True)
     axarr[0].plot(time, ampl, linestyle=' ', marker='.', color='red', markersize=1)
     axarr[0].fill_between(time, ampl + err_ampl, ampl - err_ampl, color='grey', alpha=0.3)
     axarr[0].plot(time, smooth_ampl, linestyle=' ', marker='.', color='blue', markersize=1)
+    axarr[0].fill_between(time,  smooth_ampl + 3 * smooth_err, smooth_ampl - 3 * smooth_err, color='pink', alpha=0.3)
+    axarr[0].fill_between(time,  smooth_ampl + 2 * smooth_err, smooth_ampl - 2 * smooth_err, color='green', alpha=0.3)
     axarr[0].fill_between(time, smooth_ampl + smooth_err, smooth_ampl - smooth_err, color='blue', alpha=0.3)
+    for src in flare_list:
+        axarr[0].axvspan(src[0].time, src[1].time, alpha=0.3, color='blue')
     axarr[0].set_title('Light and smooth curve')
 
     axarr[1].plot(time, delta_diff_ampl, linestyle=' ', marker='.', color='red', markersize=1)
@@ -410,46 +444,160 @@ def shapiro_fun(delta_diff_ampl, n):
     return nt
 
 
+def check_is_flare(tmp):
+    sigma2 = deque()
+    for src in tmp:
+        # print('{}: {}'.format(src.time, (src.ampl + src.err_ampl) / (src.smooth_ampl + src.smooth_err) ))
+        if src.ampl + src.err_ampl >=  src.smooth_ampl + 1.5 * src.smooth_err:
+            sigma2.append(src)
+            if len(sigma2) > 2:
+                if filter(lambda x: x.ampl + x.err_ampl >= x.smooth_ampl + 2 * x.smooth_err, sigma2):
+                    return True
+        else:
+            if sigma2:
+                sigma2 = deque()
+    return False
+
+
+def check_is_flare1(tmp):
+    sigma2 = deque()
+    for src in tmp:
+        # print('{}: {}'.format(src.time, (src.ampl + src.err_ampl) / (src.smooth_ampl + src.smooth_err) ))
+        if src.delta_diff_ampl >=  3:
+            sigma2.append(src)
+            if len(sigma2) > 2:
+                if filter(lambda x: x.delta_diff_ampl >= 3, sigma2):
+                    return True
+        # else:
+        #     if sigma2:
+        #         sigma2 = deque()
+    return False
+
+
+def get_flares(time, ampl, err_ampl, smooth_ampl, smooth_err):
+    flare_list = []
+    xren = zip(time, ampl, err_ampl, smooth_ampl, smooth_err)
+    xren_lst = [LightCurve(*src) for src in xren]
+    tmp = []
+    rec_flare = False
+    deq = deque()
+    flag = False
+    for src in xren_lst:
+        if src.ampl + src.err_ampl > src.smooth_ampl: #+ 0.5 * src.smooth_err:
+            if not rec_flare:
+                rec_flare = True
+                deq.append(src)
+        else:
+            if rec_flare:
+                deq.append(src)
+                rec_flare = False
+                tmp.append(src)
+                is_flare = check_is_flare(tmp)
+                tmp = []
+                if is_flare:
+                    flare_list.append(tuple(deq))
+                deq = deque()
+        if rec_flare:
+            tmp.append(src)
+
+    for src in flare_list:
+        print('{}\n{}'.format(*src))
+
+
+def get_flares1(time, delta_diff_ampl):
+    flare_list = []
+    xren = zip(time, delta_diff_ampl)
+    xren_lst = [LightCurve1(*src) for src in xren]
+    tmp = []
+    rec_flare = False
+    deq = deque()
+    flag = False
+    for src in xren_lst:
+        if src.delta_diff_ampl > 0:
+            if not rec_flare:
+                rec_flare = True
+                deq.append(src)
+        else:
+            if rec_flare:
+                deq.append(src)
+                rec_flare = False
+                tmp.append(src)
+                is_flare = check_is_flare1(tmp)
+                tmp = []
+                if is_flare:
+                    flare_list.append(tuple(deq))
+                deq = deque()
+        if rec_flare:
+            tmp.append(src)
+
+    for src in flare_list:
+        print('{}\n{}'.format(*src))
+
+    return flare_list
+
+
 def main():
     #lc_file_path = os.path.abspath(input('Enter path to file with light curve data:\n'))
-    lc_file_path = os.path.abspath('C:\\Users\\vasil\\YandexDisk\\WorkPlace\\Red_dwarfs\\SAO\\CN_Leo\\20090128\\090100_03.csv')
+    lc_file_path = os.path.abspath(r'C:\Users\vasil\Desktop\results_2\CN_Leo\090128_04\090128_04_1sec_lc.csv')
     header, data = open_csv(lc_file_path)
     time, ampl, err_ampl = map(np.array, lc_data(data))
-    df = pd.DataFrame(columns=time)
-    df_DP = pd.DataFrame(columns=time)
-    df_KS = pd.DataFrame(columns=time)
-    df_SW = pd.DataFrame(columns=time)
-    for n in range(39, 41):
-        #n = 40
-        smooth_ampl, smooth_err = smooth_ampl_fun(ampl, err_ampl, n)
-        diff_ampl, diff_err, delta_diff_ampl = diff_ampl_fun(ampl, smooth_ampl, smooth_err, err_ampl)
-        df.loc[n] = delta_diff_ampl
-        df_DP.loc[n] = normaltest_fun(delta_diff_ampl, n)
-        df_KS.loc[n] = kstest_fun(delta_diff_ampl, n)
-        df_SW.loc[n] = shapiro_fun(delta_diff_ampl, n)
-        print(n)
+    # df = pd.DataFrame(columns=time)
+    # df_DP = pd.DataFrame(columns=time)
+    # df_KS = pd.DataFrame(columns=time)
+    # df_SW = pd.DataFrame(columns=time)
+    
+    n = 600
+    smooth_ampl, smooth_err = smooth_ampl_fun(ampl, err_ampl, n)
+    
+
+
+
+
+    diff_ampl, diff_err, delta_diff_ampl = diff_ampl_fun(ampl, smooth_ampl, smooth_err, err_ampl)
+    flare_list = get_flares1(time, delta_diff_ampl)#, err_ampl, smooth_ampl, smooth_err)
+    # df.loc[n] = delta_diff_ampl
+        # df_DP.loc[n] = normaltest_fun(delta_diff_ampl, n)
+        # df_KS.loc[n] = kstest_fun(delta_diff_ampl, n)
+        # df_SW.loc[n] = shapiro_fun(delta_diff_ampl, n)
+    print(n)
         #print('normal skewtest teststat = {} pvalue = {}'.format(*stats.normaltest(delta_diff_ampl)))
-        if n == 40:
-            smooth_ampl0 = smooth_ampl[:]
-            smooth_err0 = smooth_err[:]
-            diff_ampl0 = diff_ampl[:]
-            diff_err0 = diff_err[:]
-            delta_diff_ampl0 = delta_diff_ampl[:]
+        # if n == 40:
+    smooth_ampl0 = smooth_ampl[:]
+    smooth_err0 = smooth_err[:]
+    diff_ampl0 = diff_ampl[:]
+    diff_err0 = diff_err[:]
+    delta_diff_ampl0 = delta_diff_ampl[:]
+    # for n in range(39, 41):
+    #     #n = 40
+    #     smooth_ampl, smooth_err = smooth_ampl_fun(ampl, err_ampl, n)
+    #     diff_ampl, diff_err, delta_diff_ampl = diff_ampl_fun(ampl, smooth_ampl, smooth_err, err_ampl)
+    #     df.loc[n] = delta_diff_ampl
+    #     # df_DP.loc[n] = normaltest_fun(delta_diff_ampl, n)
+    #     # df_KS.loc[n] = kstest_fun(delta_diff_ampl, n)
+    #     # df_SW.loc[n] = shapiro_fun(delta_diff_ampl, n)
+    #     print(n)
+    #     #print('normal skewtest teststat = {} pvalue = {}'.format(*stats.normaltest(delta_diff_ampl)))
+    #     if n == 40:
+    #         smooth_ampl0 = smooth_ampl[:]
+    #         smooth_err0 = smooth_err[:]
+    #         diff_ampl0 = diff_ampl[:]
+    #         diff_err0 = diff_err[:]
+    #         delta_diff_ampl0 = delta_diff_ampl[:]
 
 
-    draw_LSNR(time, ampl, err_ampl, smooth_ampl0, smooth_err0, delta_diff_ampl0)
+    draw_LSNR(time, ampl, err_ampl, smooth_ampl0, smooth_err0, delta_diff_ampl0, flare_list)
     draw_one_1Dgraph(time, ampl, err_ampl, 'LC')
     draw_one_1Dgraph(time, smooth_ampl0, smooth_err0, 'SC')
     draw_one_1Dgraph(time, delta_diff_ampl0, diff_err0, 'NR')
     draw_LSC(time, ampl, err_ampl, smooth_ampl0, smooth_err0)
-    draw_one_2D_graph(df, 'NRW')
-    draw_one_2D_graph(df_DP, 'DP')
-    draw_one_2D_graph(df_KS, 'KS')
-    draw_one_2D_graph(df_SW, 'SW')
-    draw_two_2D_graph(df, df_DP, 'NRW', 'DP')
-    draw_two_2D_graph(df, df_KS, 'NRW', 'KS')
-    draw_two_2D_graph(df, df_SW, 'NRW', 'SW')
-    draw_four_2D_graph(df, df_DP, df_KS, df_SW)
+    # draw_one_2D_graph(df, 'NRW')
+    # draw_one_2D_graph(df_DP, 'DP')
+    # draw_one_2D_graph(df_KS, 'KS')
+    # draw_one_2D_graph(df_SW, 'SW')
+    # draw_two_2D_graph(df, df_DP, 'NRW', 'DP')
+    # draw_two_2D_graph(df, df_KS, 'NRW', 'KS')
+    # draw_two_2D_graph(df, df_SW, 'NRW', 'SW')
+    # draw_four_2D_graph(df, df_DP, df_KS, df_SW)
 
     #print(df.index)
     #sns.heatmap(df, square=True, linewidths=.5, cbar_kws={"shrink": .5})
