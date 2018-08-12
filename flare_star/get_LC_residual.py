@@ -539,6 +539,33 @@ def get_flares1(time, delta_diff_ampl):
     return flare_list
 
 
+def calc_sigma_noise(time, ampl, time_start, time_end):
+	'''
+		Функция расчитывает среднее значение и стандартное отклонение шума 
+		на выбранном интервале [time_start, time_end]
+	'''
+	time_ampl_all = zip(time, ampl)
+    time_ampl_in_interval = [(t, a) for t, a in time_ampl_all if time_start <= t <= time_end]
+    ampl_in_interval = list(map(lambda x: x[1], time_ampl_in_interval))
+    average_noise_intensity, std_noise_intensity = calc_average_std_intensity(ampl_in_interval)
+
+
+	return average_noise_intensity, std_noise_intensity
+
+def calc_average_std_intensity(ampl):
+	'''
+		Функция возвращает среднее значение и стандартное отклонение величины ampl
+	'''
+	n = len(ampl)
+    average_ampl = sum(ampl) / n
+
+    element_of_sum_for_std = [(a - average_ampl) ** 2 for a in ampl]
+    std_ampl = math.sqrt(sum(element_of_sum_for_std) / (n - 1))
+
+    return average_ampl, std_ampl 
+
+
+
 def main():
     #lc_file_path = os.path.abspath(input('Enter path to file with light curve data:\n'))
     lc_file_path = os.path.abspath(r'C:\Users\vasil\Desktop\results_2\CN_Leo\090128_04\090128_04_1sec_lc.csv')
@@ -551,10 +578,6 @@ def main():
     
     n = 600
     smooth_ampl, smooth_err = smooth_ampl_fun(ampl, err_ampl, n)
-    
-
-
-
 
     diff_ampl, diff_err, delta_diff_ampl = diff_ampl_fun(ampl, smooth_ampl, smooth_err, err_ampl)
     flare_list = get_flares1(time, delta_diff_ampl)#, err_ampl, smooth_ampl, smooth_err)
