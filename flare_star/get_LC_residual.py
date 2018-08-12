@@ -54,38 +54,41 @@ def lc_data(data):
     return time, ampl, err_ampl
 
 
-# def smooth_ampl_fun(ampl, err, n):
-#     ampl_1 = list(ampl)
-#     err_1 = list(err)
-#     smooth_ampl = ampl_1[:int(n / 2)]
-#     smooth_err = err_1[:int(n / 2)]
-#     for index, value in enumerate(ampl_1):
-#         if index >= int(n / 2) and index < len(ampl_1) - int(n / 2):
-#             temp_ampl = ampl_1[index - int(n / 2):index + int(n / 2): 1]
-#             temp_err = err[index - int(n / 2):index + int(n / 2): 1]
-#             new_ampl, new_err = mean_std(temp_ampl, temp_err)
-#             smooth_ampl.append(new_ampl)
-#             smooth_err.append(new_err)
-#     smooth_ampl.extend(ampl[int(-n / 2):])
-#     smooth_err.extend(err_1[int(-n / 2):])
-
-#     return np.array(smooth_ampl), np.array(smooth_err)
-
-
 def smooth_ampl_fun(ampl, err, n):
     ampl_1 = list(ampl)
     err_1 = list(err)
     smooth_ampl = ampl_1[:int(n)]
     smooth_err = err_1[:int(n)]
-    for index, value in enumerate(ampl_1):
-        if index < len(ampl_1) - int(n):
-            temp_ampl = ampl_1[index:index + int(n): 1]
-            temp_err = err[index:index + int(n): 1]
-            new_ampl, new_err = mean_std(temp_ampl, temp_err)
-            smooth_ampl.append(new_ampl)
-            smooth_err.append(new_err)
-    # smooth_ampl.extend(ampl[int(-n / 2):])
-    # smooth_err.extend(err_1[int(-n / 2):])
+    temp_smooth_ampl = deque(ampl_1[:int(n)])
+    temp_smooth_err = deque(err_1[:int(n)])
+    ampl_local, sigma_local = mean_std(temp_smooth_ampl, temp_smooth_err)
+    length = len(ampl)
+    for i in range(int(n), length, 1):
+        if i < length - 2:
+            if ampl_1[i] + err_1[i] >= ampl_local + 2 * sigma_local:
+                if ampl_1[i + 1] + err_1[i + 1] >= ampl_local + 2 * sigma_local and ampl_1[i + 2] + err_1[i + 2] >= ampl_local +  2 * sigma_local:
+                    pass
+                else:
+                    temp_smooth_ampl.popleft()
+                    temp_smooth_ampl.append(ampl_1[i])
+
+                    temp_smooth_err.popleft()
+                    temp_smooth_err.append(err_1[i])
+
+                    ampl_local, sigma_local = mean_std(temp_smooth_ampl, temp_smooth_err)
+            else:
+                temp_smooth_ampl.popleft()
+                temp_smooth_ampl.append(ampl_1[i])
+
+                temp_smooth_err.popleft()
+                temp_smooth_err.append(err_1[i])
+
+                ampl_local, sigma_local = mean_std(temp_smooth_ampl, temp_smooth_err)
+        else:
+            ampl_local, sigma_local = mean_std(temp_smooth_ampl, temp_smooth_err)
+
+        smooth_ampl.append(ampl_local)
+        smooth_err.append(sigma_local)
 
     return np.array(smooth_ampl), np.array(smooth_err)
 
@@ -463,10 +466,10 @@ def check_is_flare1(tmp):
     sigma2 = deque()
     for src in tmp:
         # print('{}: {}'.format(src.time, (src.ampl + src.err_ampl) / (src.smooth_ampl + src.smooth_err) ))
-        if src.delta_diff_ampl >=  3:
+        if src.delta_diff_ampl >=  1.5:
             sigma2.append(src)
             if len(sigma2) > 2:
-                if filter(lambda x: x.delta_diff_ampl >= 3, sigma2):
+                if filter(lambda x: x.delta_diff_ampl >= 2, sigma2):
                     return True
         # else:
         #     if sigma2:
