@@ -540,29 +540,35 @@ def get_flares1(time, delta_diff_ampl):
 
 
 def calc_sigma_noise(time, ampl, time_start, time_end):
-	'''
-		Функция расчитывает среднее значение и стандартное отклонение шума 
-		на выбранном интервале [time_start, time_end]
-	'''
-	time_ampl_all = zip(time, ampl)
+    '''
+        Функция расчитывает среднее значение и стандартное отклонение шума 
+        на выбранном интервале [time_start, time_end]
+    '''
+    time_ampl_all = zip(time, ampl)
     time_ampl_in_interval = [(t, a) for t, a in time_ampl_all if time_start <= t <= time_end]
     ampl_in_interval = list(map(lambda x: x[1], time_ampl_in_interval))
+    average_noise_intensity = calc_average_intensity(ampl_in_interval)
     average_noise_intensity, std_noise_intensity = calc_average_std_intensity(ampl_in_interval)
 
 
-	return average_noise_intensity, std_noise_intensity
+    return average_noise_intensity, std_noise_intensity
 
-def calc_average_std_intensity(ampl):
-	'''
-		Функция возвращает среднее значение и стандартное отклонение величины ampl
-	'''
-	n = len(ampl)
-    average_ampl = sum(ampl) / n
 
-    element_of_sum_for_std = [(a - average_ampl) ** 2 for a in ampl]
-    std_ampl = math.sqrt(sum(element_of_sum_for_std) / (n - 1))
+def calc_average_value(value):
+	n = len(value)
+    average_ampl = sum(value) / n
 
-    return average_ampl, std_ampl 
+    return average_ampl
+
+
+def calc_std_value(value):
+	n = len(value)
+	average_value = calc_average_value(value)
+
+	element_of_sum_for_std = [(v - average_value) ** 2 for v in value]
+    std_value = math.sqrt(sum(element_of_sum_for_std) / (n - 1))
+
+    return std_value
 
 
 
