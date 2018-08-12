@@ -555,17 +555,17 @@ def calc_sigma_noise(time, ampl, time_start, time_end):
 
 
 def calc_average_value(value):
-	n = len(value)
+    n = len(value)
     average_ampl = sum(value) / n
 
     return average_ampl
 
 
 def calc_std_value(value):
-	n = len(value)
-	average_value = calc_average_value(value)
+    n = len(value)
+    average_value = calc_average_value(value)
 
-	element_of_sum_for_std = [(v - average_value) ** 2 for v in value]
+    element_of_sum_for_std = [(v - average_value) ** 2 for v in value]
     std_value = math.sqrt(sum(element_of_sum_for_std) / (n - 1))
 
     return std_value
